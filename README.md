@@ -8,7 +8,7 @@
 
 MicMinder is a small macOS menu bar app that automatically pauses your music when the microphone becomes active, then resumes the playback it paused when the microphone becomes idle. It is useful for voice input, calls, and recording while listening to music.
 
-[Setup](#get-started) · [Release notes](CHANGELOG.md) · [Build from source](#build-from-source) · [Report an issue](https://github.com/Ginolino-dev/MicMinder/issues) · [简体中文](README.zh-CN.md)
+[Setup](#get-started) · [Release notes](CHANGELOG.md) · [Build from source](#build-from-source) · [Report an issue](https://github.com/Ginolino-dev/MicMinder/issues)
 
 ## What it does
 
@@ -17,7 +17,7 @@ MicMinder is a small macOS menu bar app that automatically pauses your music whe
 - **Careful playback restoration:** confirms a pause before owning its resume, and skips resuming if the track or player changes, playback restarts, permission is lost, or automatic control is disabled.
 - **Simple setup:** a first-launch welcome window helps connect your player. Playback Permissions remains available from the menu.
 - **Menu bar controls:** switch Auto Pause/Resume or Fade Music on and off, view microphone activity, and enable Launch at Login.
-- **English and Simplified Chinese:** choose a language or follow your system preference.
+- **English interface:** English is the supported language for MicMinder.
 
 ## Current version and availability
 
@@ -71,7 +71,7 @@ cd MicMinder
 BUILD_CONFIGURATION=release APP_VERSION=1.0.3 APP_BUILD_NUMBER=5 ./script/build_and_run.sh --package
 ```
 
-Copy `dist/MicMinder.app` to Applications and open that copy. The bundle contains its executable, icon, and language resources, so it runs independently of the source checkout and build caches. Enable Launch at Login from the installed copy.
+Copy `dist/MicMinder.app` to Applications and open that copy. The bundle contains its executable, icon, and interface resources, so it runs independently of the source checkout and build caches. Enable Launch at Login from the installed copy.
 
 ### Development and verification
 
