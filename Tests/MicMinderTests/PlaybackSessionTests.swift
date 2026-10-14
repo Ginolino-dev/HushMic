@@ -4,6 +4,46 @@ import Combine
 
 @MainActor
 final class PlaybackSessionTests: XCTestCase {
+  func testEnablingIdleControlClearsDisabledStatus() async {
+    let h = Harness()
+    h.model.autoControlEnabled = false
+    h.model.autoControlEnabled = true
+    XCTAssertEqual(h.model.lastAction, .key("action.listening"))
+  }
+
+  func testDisablingPlayerDuringFadeRestoresVolumeAndCancelsPlayback() async throws {
+    let h = Harness()
+    h.volume = 60
+    await h.emit(active: true)
+    try await Task.sleep(nanoseconds: 150_000_000)
+    h.model.prepareToDisablePlayer(h.player)
+    h.automationGranted = false
+    await h.emit(active: false)
+    try await Task.sleep(nanoseconds: 600_000_000)
+    XCTAssertEqual(h.volume, 60)
+    XCTAssertEqual(h.commands, [])
+    h.automationGranted = true
+    h.model.prepareForTermination()
+  }
+
+  func testSpotifyRoundedVolumeRepliesDoNotCancelFadeOrLeaveResumeMuted() async throws {
+    let h = Harness()
+    h.volume = 60
+    h.onVolumeWrite = { [weak h] in
+      guard let h, let volume = h.volume, volume > 0, volume < 100 else { return }
+      h.volume = volume - 1
+    }
+    await h.emit(active: true)
+    try await Task.sleep(nanoseconds: 850_000_000)
+    XCTAssertEqual(h.volumeAtPause, 0)
+    XCTAssertGreaterThanOrEqual(h.volume ?? 0, 59)
+    await h.emit(active: false)
+    try await Task.sleep(nanoseconds: 850_000_000)
+    XCTAssertEqual(h.commands, ["pause:com.spotify.client", "play:com.spotify.client"])
+    XCTAssertGreaterThanOrEqual(h.volume ?? 0, 58)
+    h.model.prepareForTermination()
+  }
+
   func testFadeLowersVolumeBeforePauseAndRestoresVolumeWhilePaused() async throws {
     let h = Harness()
     h.volume = 60

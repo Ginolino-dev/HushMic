@@ -1,4 +1,15 @@
-# MicMinder version notes
+# Release notes
+
+## 1.1.0
+
+- Custom music-note and pause symbol for the menu bar and charcoal app icon.
+- Compact native panel with switches for automatic control, fades and login launch.
+- Inline Apple Music and Spotify switches, with persistent per-player control.
+- Redesigned welcome screen using the same player controls.
+- Player disable restores an owned fade before relinquishing playback control.
+- Spotify volume acknowledgement fix validated manually alongside Apple Music.
+- Clarified microphone-triggered call use cases and browser-support limitations.
+
 
 These notes describe the local development builds. No downloadable GitHub release has been published yet. Browser-control experiments are separate from the installed MicMinder app.
 

@@ -36,6 +36,7 @@ final class AppModel: ObservableObject {
       microphoneSession = snapshot.isActive ? MicrophoneSession() : nil
       setPausedByApp(false)
       if !autoControlEnabled { setLastAction(.key("action.auto_control_off")) }
+      else if !snapshot.isActive { setLastAction(.key("action.listening")) }
       updatePlaybackTimer()
       if autoControlEnabled, snapshot.isActive { handle(snapshot, fromMonitor: false) }
     }
@@ -314,6 +315,19 @@ final class AppModel: ObservableObject {
       microphoneSession?.fading = false
       microphoneSession?.didAttemptPause = false
     }
+  }
+
+  func prepareToDisablePlayer(_ player: ScriptableMediaPlayer) {
+    let canceledFade = volumeFader.cancel(for: player)
+    let ownsPlayback = microphoneSession?.resumeTarget == player || microphoneSession?.pendingPause?.player == player
+    guard canceledFade || ownsPlayback else { return }
+    microphoneSession?.fading = false
+    microphoneSession?.resumeTarget = nil
+    microphoneSession?.pendingPause = nil
+    microphoneSession?.resumeIdentity = nil
+    microphoneSession?.didAttemptPause = true
+    setPausedByApp(false)
+    updatePlaybackTimer()
   }
 
   func prepareForTermination() {

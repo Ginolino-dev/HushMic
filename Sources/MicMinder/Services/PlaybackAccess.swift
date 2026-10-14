@@ -21,7 +21,7 @@ struct PlaybackAccess {
       pause: { $0.pause() },
       play: { $0.play() },
       isRunning: { $0.isRunning },
-      hasAutomationPermission: { PermissionAuthorizationService.hasAutomationPermission(for: $0) },
+      hasAutomationPermission: { PlayerControlSettings.shared.isEnabled($0.bundleIdentifier) && PermissionAuthorizationService.hasAutomationPermission(for: $0) },
       identity: { $0.playbackIdentity() },
       volume: { $0.volume() },
       setVolume: { $0.setVolume($1) }

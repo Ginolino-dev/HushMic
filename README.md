@@ -1,12 +1,12 @@
 <p align="center">
-  <img src="design/MicMinder-icon.png" alt="MicMinder teal microphone and pause icon" width="120">
+  <img src="design/MicMinder-icon.png" alt="MicMinder white music note and pause symbol on charcoal" width="120">
 </p>
 
 # MicMinder
 
-**Music takes a break when your microphone is in use.**
+**Music makes room for your voice.**
 
-MicMinder is a small macOS menu bar app that automatically pauses your music when the microphone becomes active, then resumes the playback it paused when the microphone becomes idle. It is useful for voice input, calls, and recording while listening to music.
+MicMinder is a small macOS menu bar app that automatically pauses your music when the microphone becomes active, then resumes the playback it paused when the microphone becomes idle. Use it for voice input, calls and recording while listening to music. Answer a call on your Mac and let the music make room for the conversation.
 
 [Setup](#get-started) · [Release notes](CHANGELOG.md) · [Build from source](#build-from-source) · [Report an issue](https://github.com/Ginolino-dev/MicMinder/issues)
 
@@ -15,13 +15,13 @@ MicMinder is a small macOS menu bar app that automatically pauses your music whe
 - **Automatic pause and resume:** controls Apple Music and Spotify with explicit player commands.
 - **Optional music fades:** aims for a half-second fade-out before pausing and fade-in after playback resumes. Changes the player's volume, not your Mac's system volume.
 - **Careful playback restoration:** confirms a pause before owning its resume, and skips resuming if the track or player changes, playback restarts, permission is lost, or automatic control is disabled.
-- **Simple setup:** a first-launch welcome window helps connect your player. Playback Permissions remains available from the menu.
+- **Simple setup:** a first-launch welcome window helps connect your player. The same Apple Music and Spotify switches stay available in the menu bar panel.
 - **Menu bar controls:** switch Auto Pause/Resume or Fade Music on and off, view microphone activity, and enable Launch at Login.
 - **English interface:** English is the supported language for MicMinder.
 
 ## Current version and availability
 
-The current tested local build is **1.0.3**. Apple Music pause/resume and both fades have been manually confirmed; Spotify support is implemented and still needs the same live validation. The version's development verification included 43 passing regression tests.
+The current local build is **1.1.0**, with a new charcoal interface and custom note-and-pause icon. Apple Music and Spotify pause/resume and both fades were manually confirmed in 1.0.4; the interface update retains that playback behavior and passes 47 automated regression tests.
 
 **There is no published downloadable release yet.** For now, build from source using the instructions below. Local app bundles use ad hoc signing and are not Developer ID signed or notarized. See [release notes](CHANGELOG.md) for the version history and [GitHub Releases](https://github.com/Ginolino-dev/MicMinder/releases) for future published builds.
 
@@ -30,9 +30,9 @@ The current tested local build is **1.0.3**. Apple Music pause/resume and both f
 1. Put `MicMinder.app` in **Applications** and open it.
 2. In the welcome window, enable **Apple Music** or **Spotify** and allow macOS's Automation request. Spotify requires its desktop app, available from [Spotify's website](https://www.spotify.com/download/mac/).
 3. Play some music, then start and stop microphone input. MicMinder should pause and resume that playback.
-4. Use the microphone icon in your menu bar to change settings. You can skip setup and return to **Playback Permissions…** later.
+4. Use the note-and-pause icon in your menu bar to open the control panel. You can skip setup and connect a player later using its switch.
 
-If you previously denied permission, the setup window links to **System Settings → Privacy & Security → Automation**. Enable the player under MicMinder there.
+If you previously denied permission, the player switch opens **System Settings → Privacy & Security → Automation**. Enable the player under MicMinder there.
 
 ### Everyday controls
 
@@ -40,12 +40,12 @@ If you previously denied permission, the setup window links to **System Settings
 | --- | --- |
 | Auto Pause/Resume | Enables automatic playback control. Turning it off cancels any pending resume; already-paused music stays paused until you press Play. |
 | Fade Music | Enables player-volume fades around pause and resume. Your volume changes while paused are respected. |
-| Playback Permissions… | Shows player connection status and helps authorize playback control. |
+| Apple Music / Spotify | Enables or disables MicMinder control for that player. Switching on requests Automation permission when needed; switching off does not revoke your macOS permission. |
 | Launch at Login | Starts the installed app when you log in. |
 
 ## Supported behavior and limitations
 
-Microphone detection is system-wide, rather than specific to Codex. Codex voice input has been tested. Other apps that activate the microphone should trigger the same behavior, but individual call and recording apps still need validation.
+Microphone detection is system-wide, rather than specific to Codex. Codex voice input has been tested. A colleague has also reported music pausing when answering WhatsApp, FaceTime and iPhone calls on the Mac. These are reported use cases, not a complete compatibility test matrix. Other apps that activate the microphone should trigger the same behavior. The trigger is microphone activation when answering or using a call, rather than the incoming ringtone.
 
 MicMinder detects **microphone use, not speech**. If a meeting app keeps the microphone active, music can remain paused throughout the call. Muting inside an app does not necessarily release the microphone.
 

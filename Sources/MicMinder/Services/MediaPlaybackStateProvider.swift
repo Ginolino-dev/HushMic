@@ -17,7 +17,7 @@ final class MediaPlaybackStateProvider {
   func currentStatus() -> MediaPlaybackStatus {
     var pausedPlayer: ScriptableMediaPlayer?
     let authorizedPlayers = ScriptableMediaPlayer.supportedPlayers.filter {
-      $0.isRunning && PermissionAuthorizationService.hasAutomationPermission(for: $0)
+      $0.isRunning && PlayerControlSettings.shared.isEnabled($0.bundleIdentifier) && PermissionAuthorizationService.hasAutomationPermission(for: $0)
     }
     let authorizedIdentifiers = Set(authorizedPlayers.map(\.bundleIdentifier))
 
@@ -100,6 +100,16 @@ struct ScriptableMediaPlayer: Equatable {
 
   func setVolume(_ volume: Int) -> Bool {
     guard (0...100).contains(volume) else { return false }
+    if bundleIdentifier == "com.spotify.client", volume > 0, volume < 100 {
+      // Spotify can truncate the slider's floating-point value by one point.
+      // Correct downward rounding so repeated restores don't lower the level.
+      return runAppleScript("""
+        tell application id "\(bundleIdentifier)"
+          set sound volume to \(volume)
+          if sound volume < \(volume) then set sound volume to \(volume + 1)
+        end tell
+        """) != nil
+    }
     return runAppleScript("tell application id \"\(bundleIdentifier)\" to set sound volume to \(volume)") != nil
   }
 

@@ -1,212 +1,81 @@
 import AppKit
 import Combine
+import SwiftUI
 
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
   private let appModel = AppModel()
   private let localizer = AppLocalizer()
+  private lazy var connections = PlayerConnectionModel(appModel: appModel)
   private var statusItem: NSStatusItem?
-  private var displayedStatusIcon: String?
+  private var panel: NSPanel?
   private var cancellables: Set<AnyCancellable> = []
   private var permissionWindowController: PermissionAuthorizationWindowController?
-
   func applicationDidFinishLaunching(_ notification: Notification) {
     NSApp.setActivationPolicy(.accessory)
-    appModel.onPermissionAuthorizationNeeded = { [weak self] in
-      self?.presentPermissionConfirmationIfNeeded()
-    }
-
     let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     self.statusItem = statusItem
-    statusItem.menu = makeMenu()
-    updateStatusIcon()
-    if !UserDefaults.standard.bool(forKey: "welcomeCompleted") {
-      DispatchQueue.main.async { [weak self] in self?.showPermissionWindow(welcome: true) }
+    statusItem.button?.image = MicMinderSymbol.image()
+    statusItem.button?.target = self
+    statusItem.button?.action = #selector(togglePanel)
+    let host = NSHostingController(rootView: ControlPanelView(
+      model: appModel, localizer: localizer, connections: connections,
+      setup: { [weak self] in self?.panel?.close(); self?.showWelcome() },
+      quit: { NSApp.terminate(nil) }))
+    let panel = ControlPanelWindow(contentViewController: host)
+    panel.title = "MicMinder"
+    panel.styleMask = [.titled, .fullSizeContentView]
+    panel.titleVisibility = .hidden
+    panel.titlebarAppearsTransparent = true
+    panel.standardWindowButton(.closeButton)?.isHidden = true
+    panel.standardWindowButton(.miniaturizeButton)?.isHidden = true
+    panel.standardWindowButton(.zoomButton)?.isHidden = true
+    panel.backgroundColor = NSColor(calibratedWhite: 0.10, alpha: 1)
+    panel.isReleasedWhenClosed = false
+    panel.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
+    panel.delegate = self
+    panel.setContentSize(host.view.fittingSize)
+    self.panel = panel
+    appModel.onPermissionAuthorizationNeeded = { [weak self] in self?.showPanel() }
+    appModel.objectWillChange.sink { [weak self] _ in
+      DispatchQueue.main.async { self?.updateStatus() }
+    }.store(in: &cancellables)
+    updateStatus()
+    if CommandLine.arguments.contains("--show-panel") {
+      DispatchQueue.main.async { [weak self] in self?.showPanel() }
     }
-
-    appModel.objectWillChange
-      .sink { [weak self] _ in
-        DispatchQueue.main.async {
-          self?.updateStatusIcon()
-        }
-      }
-      .store(in: &cancellables)
-
-  }
-
-  private func updateStatusIcon() {
-    guard let button = statusItem?.button else {
-      return
-    }
-
-    let icon = appModel.menuBarIcon
-    guard displayedStatusIcon != icon else { return }
-    displayedStatusIcon = icon
-    let image = NSImage(
-      systemSymbolName: icon,
-      accessibilityDescription: "MicMinder"
-    )
-    image?.isTemplate = true
-    button.image = image
-  }
-
-  private func makeMenu() -> NSMenu {
-    let menu = NSMenu()
-    menu.delegate = self
-    rebuild(menu)
-    return menu
-  }
-
-  private func rebuild(_ menu: NSMenu) {
-    menu.removeAllItems()
-    menu.addItem(disabledItem(appModel.statusTitle(localizer: localizer)))
-    menu.addItem(disabledItem(appModel.deviceTitle(localizer: localizer)))
-    menu.addItem(disabledItem(appModel.lastActionTitle(localizer: localizer)))
-    menu.addItem(.separator())
-
-    menu.addItem(actionItem(
-      title: localizer.text("menu.auto_control"),
-      action: #selector(toggleAutoControl),
-      state: appModel.autoControlEnabled ? .on : .off
-    ))
-    menu.addItem(actionItem(
-      title: localizer.text("menu.fade_music"),
-      action: #selector(toggleFadeMusic),
-      state: appModel.fadeMusicEnabled ? .on : .off
-    ))
-    menu.addItem(actionItem(
-      title: localizer.text("menu.launch_at_login"),
-      action: #selector(toggleLaunchAtLogin),
-      state: appModel.launchAtLoginEnabled ? .on : .off
-    ))
-    menu.addItem(.separator())
-
-    let languageItem = NSMenuItem(title: localizer.text("menu.language"), action: nil, keyEquivalent: "")
-    languageItem.submenu = makeLanguageMenu()
-    menu.addItem(languageItem)
-    menu.addItem(.separator())
-
-    menu.addItem(actionItem(title: localizer.text("menu.refresh"), action: #selector(refresh)))
-    menu.addItem(actionItem(title: localizer.text("menu.playback_permissions"), action: #selector(openPlaybackPermissions)))
-    menu.addItem(actionItem(title: localizer.text("menu.github"), action: #selector(openGitHub)))
-    menu.addItem(.separator())
-    menu.addItem(disabledItem(versionTitle()))
-    menu.addItem(actionItem(title: localizer.text("menu.quit"), action: #selector(quit)))
-  }
-
-  private func makeLanguageMenu() -> NSMenu {
-    let menu = NSMenu()
-
-    for language in AppLanguage.allCases {
-      let item = actionItem(
-        title: languageTitle(language),
-        action: #selector(selectLanguage(_:)),
-        state: localizer.language == language ? .on : .off
-      )
-      item.representedObject = language.rawValue
-      menu.addItem(item)
-    }
-
-    return menu
-  }
-
-  private func disabledItem(_ title: String) -> NSMenuItem {
-    let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
-    item.isEnabled = false
-    return item
-  }
-
-  private func actionItem(title: String, action: Selector, state: NSControl.StateValue = .off) -> NSMenuItem {
-    let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
-    item.target = self
-    item.state = state
-    return item
-  }
-
-  private func languageTitle(_ language: AppLanguage) -> String {
-    switch language {
-    case .automatic:
-      return localizer.text("language.automatic")
-    case .zhHans:
-      return localizer.text("language.zh_hans")
-    case .en:
-      return localizer.text("language.english")
+    if !UserDefaults.standard.bool(forKey: "welcomeCompleted") || CommandLine.arguments.contains("--show-setup") {
+      DispatchQueue.main.async { [weak self] in self?.showWelcome() }
     }
   }
-
-  private func versionTitle() -> String {
-    let rawVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
-    let version = rawVersion?.trimmingCharacters(in: .whitespacesAndNewlines)
-
-    if let version, !version.isEmpty {
-      return localizer.text("menu.version %@", version)
+  private func updateStatus() {
+    statusItem?.button?.toolTip = "MicMinder · " + appModel.statusTitle(localizer: localizer)
+    statusItem?.button?.alphaValue = appModel.autoControlEnabled ? 1 : 0.45
+  }
+  @objc private func togglePanel() { if panel?.isVisible == true { panel?.close() } else { showPanel() } }
+  private func showPanel() {
+    guard let button = statusItem?.button, let panel else { return }
+    if !panel.isVisible { connections.start() }
+    connections.refresh()
+    if let window = button.window, let screen = window.screen {
+      let anchor = window.convertToScreen(button.convert(button.bounds, to: nil))
+      let x = min(max(anchor.midX - panel.frame.width / 2, screen.visibleFrame.minX + 8), screen.visibleFrame.maxX - panel.frame.width - 8)
+      panel.setFrameOrigin(NSPoint(x: x, y: anchor.minY - panel.frame.height - 8))
     }
-
-    return localizer.text("menu.version %@", "dev")
+    NSApp.activate(ignoringOtherApps: true)
+    panel.makeKeyAndOrderFront(nil)
   }
-
-  @objc private func toggleAutoControl() {
-    appModel.autoControlEnabled.toggle()
+  private func showWelcome() {
+    if permissionWindowController == nil { permissionWindowController = PermissionAuthorizationWindowController(connections: connections) }
+    permissionWindowController?.show()
   }
-
-  @objc private func toggleFadeMusic() { appModel.fadeMusicEnabled.toggle() }
-
+  func windowWillClose(_ notification: Notification) { connections.stop() }
+  func windowDidResignKey(_ notification: Notification) {
+    if !CommandLine.arguments.contains("--show-panel") { panel?.close() }
+  }
   func applicationWillTerminate(_ notification: Notification) { appModel.prepareForTermination() }
-
-  @objc private func toggleLaunchAtLogin() {
-    appModel.launchAtLoginEnabled.toggle()
-  }
-
-  @objc private func selectLanguage(_ sender: NSMenuItem) {
-    guard
-      let rawLanguage = sender.representedObject as? String,
-      let language = AppLanguage(rawValue: rawLanguage)
-    else {
-      return
-    }
-
-    localizer.language = language
-  }
-
-  @objc private func refresh() {
-    appModel.refresh()
-  }
-
-  @objc private func openPlaybackPermissions() {
-    presentPermissionConfirmationIfNeeded()
-  }
-
-  @objc private func openGitHub() {
-    guard let url = URL(string: "https://github.com/Ginolino-dev/MicMinder") else {
-      return
-    }
-    NSWorkspace.shared.open(url)
-  }
-
-  @objc private func quit() {
-    NSApplication.shared.terminate(nil)
-  }
-
-  private func presentPermissionConfirmationIfNeeded() {
-    // Only explicit menu/button actions open this nonmodal window.
-    DispatchQueue.main.async { [weak self] in self?.showPermissionWindow() }
-  }
-
-  private func showPermissionWindow(welcome: Bool = false) {
-    if permissionWindowController == nil {
-      permissionWindowController = PermissionAuthorizationWindowController(
-        appModel: appModel,
-        localizer: localizer
-      )
-    }
-
-    permissionWindowController?.show(welcome: welcome)
-  }
 }
-
-extension AppDelegate: NSMenuDelegate {
-  func menuWillOpen(_ menu: NSMenu) {
-    rebuild(menu)
-  }
+private final class ControlPanelWindow: NSPanel {
+  override func cancelOperation(_ sender: Any?) { close() }
 }
 
 @main

@@ -45,6 +45,14 @@ final class VolumeFadeController {
     return true
   }
 
+  @discardableResult
+  func cancel(for player: ScriptableMediaPlayer) -> Bool {
+    retryRestoration()
+    guard operation?.player == player else { return false }
+    cancel()
+    return true
+  }
+
   func cancel() {
     timer?.invalidate()
     timer = nil
@@ -144,7 +152,17 @@ final class VolumeFadeController {
         finish(current, restoreVolume: true)
         return
       }
-      current.lastVolume = volume
+      // Spotify quantizes its slider and can acknowledge an adjacent integer.
+      // Record the reply to our write, so later reads still detect user edits.
+      let acknowledged = playback.volume(current.player)
+      guard operation?.id == current.id else { return }
+      let allowsRounding = current.player.bundleIdentifier == "com.spotify.client"
+      guard let acknowledged,
+            acknowledged == volume || (allowsRounding && abs(acknowledged - volume) <= 1) else {
+        finish(current, restoreVolume: false)
+        return
+      }
+      current.lastVolume = acknowledged
       current.frames += 1
       guard operation?.id == current.id else { return }
       operation = current
