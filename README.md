@@ -21,7 +21,7 @@ MicMinder is a small macOS menu bar app that automatically pauses your music whe
 
 ## Current version and availability
 
-The current local build is **1.1.0**, with a new charcoal interface and custom note-and-pause icon. Apple Music and Spotify pause/resume and both fades were manually confirmed in 1.0.4; the interface update retains that playback behavior and passes 47 automated regression tests.
+The current local build is **1.1.4**, with a compact native Apple popover, adaptive appearance and custom note-and-pause icon. Apple Music and Spotify pause/resume and both fades were manually confirmed in 1.0.4; the interface update retains that playback behavior and passes 49 automated regression tests.
 
 **There is no published downloadable release yet.** For now, build from source using the instructions below. Local app bundles use ad hoc signing and are not Developer ID signed or notarized. See [release notes](CHANGELOG.md) for the version history and [GitHub Releases](https://github.com/Ginolino-dev/MicMinder/releases) for future published builds.
 
@@ -59,16 +59,16 @@ MicMinder detects **microphone use, not speech**. If a meeting app keeps the mic
 
 MicMinder observes microphone activity through CoreAudio. It does **not record microphone audio**. The app has no audio capture pipeline or network telemetry.
 
-Playback control needs **Automation permission for each player**. No Accessibility permission is required, and there is no global media-key test. Authorization is requested through the setup window, not silently by background monitoring.
+Playback control needs **Automation permission for each player**. No Accessibility permission is required, and there is no global media-key test. Authorization is requested only when you enable a player in the welcome window or menu bar popover, never silently by background monitoring.
 
 ## Build from source
 
-Running the app requires **macOS 14 or later**. Building also requires the Swift 5.9 or newer toolchain supplied by Xcode or Xcode Command Line Tools.
+Running the app requires **macOS 14 or later**. Building requires Xcode 26 or later (or equivalent Command Line Tools with the macOS 26+ SDK), because the welcome window uses the Liquid Glass API. The app uses a native material fallback on older macOS versions.
 
 ```bash
 git clone https://github.com/Ginolino-dev/MicMinder.git
 cd MicMinder
-BUILD_CONFIGURATION=release APP_VERSION=1.0.3 APP_BUILD_NUMBER=5 ./script/build_and_run.sh --package
+BUILD_CONFIGURATION=release APP_VERSION=1.1.4 APP_BUILD_NUMBER=7 ./script/build_and_run.sh --package
 ```
 
 Copy `dist/MicMinder.app` to Applications and open that copy. The bundle contains its executable, icon, and interface resources, so it runs independently of the source checkout and build caches. Enable Launch at Login from the installed copy.

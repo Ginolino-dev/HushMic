@@ -26,6 +26,8 @@ jobs:
           TAG="${GITHUB_REF_NAME}"
           VERSION="${TAG#v}"
 
+          swift test
+
           APP_VERSION="$VERSION" \
             APP_BUILD_NUMBER="$GITHUB_RUN_NUMBER" \
             BUILD_CONFIGURATION=release \
@@ -43,10 +45,12 @@ jobs:
           set -euo pipefail
           TAG="${GITHUB_REF_NAME}"
           VERSION="${TAG#v}"
-          ZIP_PATH="dist/MicMinder-${VERSION}-macos.zip"
+          ARCH="$(uname -m)"
+          ZIP_PATH="dist/MicMinder-${VERSION}-macOS-${ARCH}.zip"
 
           rm -f "$ZIP_PATH"
-          (cd dist && ditto -c -k --keepParent MicMinder.app "MicMinder-${VERSION}-macos.zip")
+          ditto -c -k --keepParent dist/MicMinder.app "$ZIP_PATH"
+          (cd dist && shasum -a 256 "$(basename "$ZIP_PATH")" > "$(basename "$ZIP_PATH").sha256")
           echo "ZIP_PATH=$ZIP_PATH" >> "$GITHUB_ENV"
 
       - name: Publish GitHub release
@@ -60,10 +64,11 @@ jobs:
           ASSET_LABEL="MicMinder ${VERSION} for macOS"
 
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" "$ZIP_PATH#$ASSET_LABEL" --clobber
+            gh release upload "$TAG" "$ZIP_PATH#$ASSET_LABEL" "$ZIP_PATH.sha256" --clobber
           else
-            gh release create "$TAG" "$ZIP_PATH#$ASSET_LABEL" \
+            gh release create "$TAG" "$ZIP_PATH#$ASSET_LABEL" "$ZIP_PATH.sha256" \
               --title "MicMinder ${VERSION}" \
+              --draft \
               --generate-notes \
               --verify-tag
           fi

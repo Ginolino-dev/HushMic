@@ -6,7 +6,6 @@ final class AppModel: ObservableObject {
   @Published private(set) var snapshot = MicrophoneSnapshot.unknown
   @Published private(set) var lastAction = LocalizedMessage.key("action.listening")
   @Published private(set) var pausedByApp = false
-  var onPermissionAuthorizationNeeded: (() -> Void)?
 
   @Published var launchAtLoginEnabled: Bool {
     didSet {
@@ -91,28 +90,12 @@ final class AppModel: ObservableObject {
     return snapshot.isActive ? localizer.text("status.mic_active") : localizer.text("status.mic_idle")
   }
 
-  var menuBarIcon: String {
-    if snapshot.errorMessage != nil {
-      return "exclamationmark.triangle"
-    }
-
-    if snapshot.isActive {
-      return autoControlEnabled ? "mic.fill" : "mic.fill.slash"
-    }
-
-    return autoControlEnabled ? "mic" : "mic.slash"
-  }
-
   func deviceTitle(localizer: AppLocalizer) -> String {
     snapshot.primaryDeviceName(localizer: localizer)
   }
 
   func lastActionTitle(localizer: AppLocalizer) -> String {
     lastAction.resolve(with: localizer)
-  }
-
-  func requestPermissionAuthorizationFlow() {
-    requestPermissionAuthorization()
   }
 
   func refresh() {
@@ -402,10 +385,6 @@ final class AppModel: ObservableObject {
       self.handle(self.snapshot, fromMonitor: false)
     }
     playbackTimer?.tolerance = 0.05
-  }
-
-  private func requestPermissionAuthorization() {
-    onPermissionAuthorizationNeeded?()
   }
 
   private func updateLaunchAtLogin(enabled: Bool, previousValue: Bool) {

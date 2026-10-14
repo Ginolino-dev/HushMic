@@ -1,75 +1,6 @@
 import Foundation
 
-enum AppLanguage: String, CaseIterable, Identifiable {
-  case automatic
-  case zhHans
-  case en
-
-  var id: String {
-    rawValue
-  }
-
-  var lprojName: String? {
-    switch self {
-    case .automatic:
-      return nil
-    case .zhHans:
-      return "zh-Hans"
-    case .en:
-      return "en"
-    }
-  }
-
-  var localeIdentifier: String {
-    switch self {
-    case .automatic:
-      return AppLanguage.resolvedAutomatic.localeIdentifier
-    case .zhHans:
-      return "zh-Hans"
-    case .en:
-      return "en"
-    }
-  }
-
-  static var resolvedAutomatic: AppLanguage {
-    let preferred = Bundle.preferredLocalizations(
-      from: ["zh-Hans", "en"],
-      forPreferences: Locale.preferredLanguages
-    )
-
-    return preferred.first == "zh-Hans" ? .zhHans : .en
-  }
-}
-
 final class AppLocalizer: ObservableObject {
-  @Published var language: AppLanguage {
-    didSet {
-      UserDefaults.standard.set(language.rawValue, forKey: Self.languageDefaultsKey)
-    }
-  }
-
-  private static let languageDefaultsKey = "appLanguage"
-
-  init() {
-    if
-      let rawLanguage = UserDefaults.standard.string(forKey: Self.languageDefaultsKey),
-      let savedLanguage = AppLanguage(rawValue: rawLanguage)
-    {
-      language = savedLanguage
-    } else {
-      language = .automatic
-    }
-  }
-
-  var resolvedLanguage: AppLanguage {
-    switch language {
-    case .automatic:
-      return AppLanguage.resolvedAutomatic
-    case .zhHans, .en:
-      return language
-    }
-  }
-
   func text(_ key: String, _ arguments: CVarArg...) -> String {
     text(key, arguments: arguments)
   }
@@ -89,24 +20,21 @@ final class AppLocalizer: ObservableObject {
 
     return String(
       format: format,
-      locale: Locale(identifier: resolvedLanguage.localeIdentifier),
+      locale: Locale(identifier: "en"),
       arguments: arguments
     )
   }
 
-  private var localizationBundle: Bundle {
-    let language = resolvedLanguage
-
+  private let localizationBundle: Bundle = {
     guard
-      let lprojName = language.lprojName,
-      let path = Bundle.main.path(forResource: lprojName, ofType: "lproj"),
+      let path = Bundle.main.path(forResource: "en", ofType: "lproj"),
       let bundle = Bundle(path: path)
     else {
       return .main
     }
 
     return bundle
-  }
+  }()
 }
 
 indirect enum LocalizedMessage: Equatable {

@@ -1,5 +1,32 @@
 # Release notes
 
+## 1.1.4
+
+- Audit native playback, permissions, resource use and release packaging.
+- Remove unused audio-query helpers, legacy iTunes handling, obsolete UI strings, old screenshots and the retired teal icon generator.
+- Cache the English resource bundle instead of resolving it on each status update.
+- Include the MIT license in app bundles and validate packaging inputs before building.
+- Gate release packaging on tests; label archive architecture and include a checksum.
+- Correct source-build requirements and version instructions.
+
+## 1.1.3
+
+- Simplify More Options to Welcome & Setup, Help & Feedback, Release Notes and Quit MicMinder.
+- Remove manual Refresh and the language selector; use English consistently, including permission descriptions.
+
+## 1.1.2
+
+- Use an Apple popover anchored to the menu bar icon, with native outside-click and Escape dismissal.
+- Simplify the main controls and move language, setup and secondary actions into More Options.
+- Retain asynchronous permission refresh, system appearance and native switches.
+
+## 1.1.1
+
+- Open the panel immediately, with permission status refreshed in the background.
+- Use native Liquid Glass on macOS 26+ and translucent native material on older versions.
+- Follow the system light/dark appearance, with native Apple switches and their standard on/off appearance.
+- Add permission-refresh regressions; all 49 tests pass.
+
 ## 1.1.0
 
 - Custom music-note and pause symbol for the menu bar and charcoal app icon.

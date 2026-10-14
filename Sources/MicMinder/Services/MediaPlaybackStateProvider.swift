@@ -43,8 +43,7 @@ final class MediaPlaybackStateProvider {
 struct ScriptableMediaPlayer: Equatable {
   static let supportedPlayers = [
     ScriptableMediaPlayer(bundleIdentifier: "com.apple.Music", displayName: "Music"),
-    ScriptableMediaPlayer(bundleIdentifier: "com.spotify.client", displayName: "Spotify"),
-    ScriptableMediaPlayer(bundleIdentifier: "com.apple.iTunes", displayName: "iTunes")
+    ScriptableMediaPlayer(bundleIdentifier: "com.spotify.client", displayName: "Spotify")
   ]
 
   var bundleIdentifier: String

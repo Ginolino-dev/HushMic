@@ -1,13 +1,14 @@
 import AppKit
 import Combine
+import OSLog
 import SwiftUI
 
-final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
   private let appModel = AppModel()
   private let localizer = AppLocalizer()
   private lazy var connections = PlayerConnectionModel(appModel: appModel)
   private var statusItem: NSStatusItem?
-  private var panel: NSPanel?
+  private let popover = NSPopover()
   private var cancellables: Set<AnyCancellable> = []
   private var permissionWindowController: PermissionAuthorizationWindowController?
   func applicationDidFinishLaunching(_ notification: Notification) {
@@ -19,23 +20,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     statusItem.button?.action = #selector(togglePanel)
     let host = NSHostingController(rootView: ControlPanelView(
       model: appModel, localizer: localizer, connections: connections,
-      setup: { [weak self] in self?.panel?.close(); self?.showWelcome() },
+      setup: { [weak self] in
+        self?.popover.performClose(nil)
+        DispatchQueue.main.async { self?.showWelcome() }
+      },
+      close: { [weak self] in self?.popover.performClose(nil) },
       quit: { NSApp.terminate(nil) }))
-    let panel = ControlPanelWindow(contentViewController: host)
-    panel.title = "MicMinder"
-    panel.styleMask = [.titled, .fullSizeContentView]
-    panel.titleVisibility = .hidden
-    panel.titlebarAppearsTransparent = true
-    panel.standardWindowButton(.closeButton)?.isHidden = true
-    panel.standardWindowButton(.miniaturizeButton)?.isHidden = true
-    panel.standardWindowButton(.zoomButton)?.isHidden = true
-    panel.backgroundColor = NSColor(calibratedWhite: 0.10, alpha: 1)
-    panel.isReleasedWhenClosed = false
-    panel.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
-    panel.delegate = self
-    panel.setContentSize(host.view.fittingSize)
-    self.panel = panel
-    appModel.onPermissionAuthorizationNeeded = { [weak self] in self?.showPanel() }
+    popover.behavior = .transient
+    popover.delegate = self
+    popover.contentViewController = host
+    popover.contentSize = host.view.fittingSize
     appModel.objectWillChange.sink { [weak self] _ in
       DispatchQueue.main.async { self?.updateStatus() }
     }.store(in: &cancellables)
@@ -51,33 +45,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     statusItem?.button?.toolTip = "MicMinder · " + appModel.statusTitle(localizer: localizer)
     statusItem?.button?.alphaValue = appModel.autoControlEnabled ? 1 : 0.45
   }
-  @objc private func togglePanel() { if panel?.isVisible == true { panel?.close() } else { showPanel() } }
+  @objc private func togglePanel() { if popover.isShown { popover.performClose(nil) } else { showPanel() } }
   private func showPanel() {
-    guard let button = statusItem?.button, let panel else { return }
-    if !panel.isVisible { connections.start() }
-    connections.refresh()
-    if let window = button.window, let screen = window.screen {
-      let anchor = window.convertToScreen(button.convert(button.bounds, to: nil))
-      let x = min(max(anchor.midX - panel.frame.width / 2, screen.visibleFrame.minX + 8), screen.visibleFrame.maxX - panel.frame.width - 8)
-      panel.setFrameOrigin(NSPoint(x: x, y: anchor.minY - panel.frame.height - 8))
-    }
+    guard let button = statusItem?.button, !popover.isShown else { return }
+    let started = ProcessInfo.processInfo.systemUptime
     NSApp.activate(ignoringOtherApps: true)
-    panel.makeKeyAndOrderFront(nil)
+    popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+    popover.contentViewController?.view.window?.makeKey()
+    Logger(subsystem: "dev.ginolino.MicMinder", category: "Interface").notice("Native popover presented in \(Int((ProcessInfo.processInfo.systemUptime - started) * 1000)) ms")
   }
   private func showWelcome() {
     if permissionWindowController == nil { permissionWindowController = PermissionAuthorizationWindowController(connections: connections) }
     permissionWindowController?.show()
   }
-  func windowWillClose(_ notification: Notification) { connections.stop() }
-  func windowDidResignKey(_ notification: Notification) {
-    if !CommandLine.arguments.contains("--show-panel") { panel?.close() }
-  }
+  func popoverDidShow(_ notification: Notification) { connections.start() }
+  func popoverDidClose(_ notification: Notification) { connections.stop() }
   func applicationWillTerminate(_ notification: Notification) { appModel.prepareForTermination() }
 }
-private final class ControlPanelWindow: NSPanel {
-  override func cancelOperation(_ sender: Any?) { close() }
-}
-
 @main
 struct MicMinderApp {
   static func main() {

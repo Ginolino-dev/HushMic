@@ -6,8 +6,8 @@ APP_NAME="MicMinder"
 BUNDLE_ID="dev.ginolino.MicMinder"
 MIN_SYSTEM_VERSION="14.0"
 BUILD_CONFIGURATION="${BUILD_CONFIGURATION:-debug}"
-APP_VERSION="${APP_VERSION:-}"
-APP_BUILD_NUMBER="${APP_BUILD_NUMBER:-1}"
+APP_VERSION="${APP_VERSION:-1.1.4}"
+APP_BUILD_NUMBER="${APP_BUILD_NUMBER:-7}"
 CODESIGN_IDENTITY="${CODESIGN_IDENTITY:--}"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -22,9 +22,14 @@ SOURCE_RESOURCES="$ROOT_DIR/Sources/MicMinder/Resources"
 
 cd "$ROOT_DIR"
 
-if [[ "$MODE" != "--package" && "$MODE" != "package" ]]; then
-  pkill -x "$APP_NAME" >/dev/null 2>&1 || true
-fi
+case "$MODE" in
+  run|--package|package|--debug|debug|--logs|logs|--telemetry|telemetry|--verify|verify) ;;
+  *) echo "Unknown mode: $MODE" >&2; exit 2 ;;
+esac
+[[ "$BUILD_CONFIGURATION" == "debug" || "$BUILD_CONFIGURATION" == "release" ]] || { echo "Use debug or release configuration." >&2; exit 2; }
+[[ "$APP_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ && "$APP_BUILD_NUMBER" =~ ^[0-9]+$ ]] || { echo "Use a numeric x.y.z version and numeric build number." >&2; exit 2; }
+SDK_VERSION="$(xcrun --sdk macosx --show-sdk-version)"
+[[ "${SDK_VERSION%%.*}" -ge 26 ]] || { echo "Building requires the macOS 26 SDK or newer." >&2; exit 2; }
 
 swift build --configuration "$BUILD_CONFIGURATION"
 BUILD_BINARY="$(swift build --configuration "$BUILD_CONFIGURATION" --show-bin-path)/$APP_NAME"
@@ -45,6 +50,7 @@ mkdir -p "$APP_MACOS" "$APP_RESOURCES"
 cp "$BUILD_BINARY" "$APP_BINARY"
 chmod +x "$APP_BINARY"
 cp -R "$SOURCE_RESOURCES"/. "$APP_RESOURCES"
+cp LICENSE "$APP_RESOURCES/LICENSE"
 
 cat >"$INFO_PLIST" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -52,7 +58,7 @@ cat >"$INFO_PLIST" <<PLIST
 <plist version="1.0">
 <dict>
   <key>CFBundleDevelopmentRegion</key>
-  <string>zh-Hans</string>
+  <string>en</string>
   <key>CFBundleExecutable</key>
   <string>$APP_NAME</string>
   <key>CFBundleIdentifier</key>
@@ -71,7 +77,7 @@ ${VERSION_PLIST}
   <key>LSUIElement</key>
   <true/>
   <key>NSAppleEventsUsageDescription</key>
-  <string>用于读取 Music 或 Spotify 的播放状态，并在麦克风使用时执行暂停和恢复。</string>
+  <string>Used to read Music or Spotify playback state, and pause/resume playback when the microphone is in use.</string>
   <key>NSPrincipalClass</key>
   <string>NSApplication</string>
 </dict>
@@ -79,8 +85,11 @@ ${VERSION_PLIST}
 PLIST
 
 codesign --force --deep --sign "$CODESIGN_IDENTITY" "$APP_BUNDLE"
+codesign --verify --deep --strict "$APP_BUNDLE"
 
 open_app() {
+  # Keep the installed app running if compilation or packaging fails.
+  pkill -x "$APP_NAME" >/dev/null 2>&1 || true
   /usr/bin/open -n "$APP_BUNDLE"
 }
 

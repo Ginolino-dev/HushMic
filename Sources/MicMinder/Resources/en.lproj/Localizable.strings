@@ -1,33 +1,16 @@
-/* Menu items */
 "menu.auto_control" = "Auto Pause/Resume";
 "menu.launch_at_login" = "Launch at Login";
-"menu.language" = "Language";
-"menu.refresh" = "Refresh Status";
-"menu.playback_permissions" = "Playback Permissions…";
-"menu.version %@" = "Version %@";
-"menu.github" = "GitHub";
-"menu.quit" = "Quit";
-
-/* Language */
-"language.automatic" = "Auto Detect";
-"language.zh_hans" = "简体中文";
-"language.english" = "English";
-
-/* Status titles */
 "status.initializing" = "Initializing";
 "status.monitor_error %@" = "Monitor Error: %@";
 "status.mic_active" = "Microphone In Use";
 "status.mic_idle" = "Microphone Idle";
 "status.no_microphone" = "No Microphone Found";
-
-/* Action messages */
 "action.listening" = "Listening for microphone";
 "action.auto_control_off" = "Auto control disabled";
 "action.automation_permission_missing" = "Music app automation permission missing";
 "action.paused_player %@" = "Mic active, paused %@";
 "action.music_already_paused" = "Music already paused, skipped";
 "action.playback_unconfirmed" = "Playback not confirmed, skipped";
-"action.no_pausable_playback" = "No pausable playback detected";
 "action.paused" = "Mic active, playback paused";
 "action.mic_idle" = "Microphone idle";
 "action.resume_failed" = "Resume playback failed";
@@ -35,68 +18,20 @@
 "action.login_item_error %@" = "Launch at login failed: %@";
 "action.login_item_enabled" = "Launch at login enabled";
 "action.login_item_disabled" = "Launch at login disabled";
-
-/* Device */
 "device.fallback_name %lld" = "Microphone %lld";
-
-/* Permissions */
-"permission.automation %@" = "%@ automation permission";
-"permission.window.title" = "MicMinder Permissions";
-"permission.window.heading" = "Optional Playback Permissions";
-"permission.window.status_needed" = "Not authorized";
-"permission.window.status_granted" = "Authorized";
-"permission.window.authorize" = "Authorize";
-"permission.window.confirm" = "Done";
-"permission.window.quit" = "Quit App";
-"permission.window.all_granted" = "All permissions are complete";
-
-/* CoreAudio error contexts */
 "coreaudio.read_device_list_size" = "Read audio device list size";
 "coreaudio.read_device_list" = "Read audio device list";
-"coreaudio.read_default_output" = "Read default output device";
 "coreaudio.read_process_list" = "Read audio process list";
 "coreaudio.read_process_devices" = "Read audio process devices";
 "coreaudio.read_input_channels" = "Read input channels";
 "coreaudio.context_size %@" = "%@ size";
 "coreaudio.error %@ %lld" = "%@ failed: %lld";
-
-/* Launch at login */
 "login.still_enabled" = "Login item is still enabled";
 "login.not_registered" = "Login item registration incomplete";
 "login.requires_approval" = "Please allow MicMinder in System Settings > Login Items";
 "login.not_found" = "Current app bundle cannot be registered as login item";
 "login.unknown_status" = "Unknown login item status";
-
-"permission.window.later" = "Not Now";
 "action.playback_changed" = "Playback changed, automatic resume skipped";
 "action.pause_failed" = "Could not confirm playback paused";
-
 "coreaudio.observe_activity" = "Observe microphone activity";
-
-"setup.welcome" = "Welcome to MicMinder";
-
-"setup.players" = "Connect your music player";
-
-"setup.message" = "MicMinder pauses your music while you speak, then resumes it. Enable your player below and allow MicMinder to control it when macOS asks.";
-
-"setup.menu_hint" = "MicMinder lives in your menu bar. You can reopen Playback Permissions there at any time.";
-
-"setup.later" = "Set Up Later";
-
-"setup.start" = "Get Started";
-
-"setup.connected" = "Connected";
-
-"setup.connecting" = "Connecting…";
-
-"setup.not_connected" = "Not connected — enable to pause and resume";
-
-"setup.denied" = "Permission denied. In System Settings → Privacy & Security → Automation, enable this player under MicMinder.";
-
-"setup.settings" = "Open Settings";
-
-"setup.enable" = "Enable";
-
-"setup.failed" = "Could not open the player. Check that it is installed, then try again.";
-
 "menu.fade_music" = "Fade Music";

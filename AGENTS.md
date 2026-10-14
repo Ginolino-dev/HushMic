@@ -32,7 +32,7 @@ Keep UI wrappers minimal. Each `View`, `VStack`, `Group`, or helper type should 
 
 ## Testing Guidelines
 
-There is currently no `Tests/` target. For behavior changes, at minimum run `swift build` and `./script/build_and_run.sh --verify`. For microphone, accessibility, media playback, or launch-at-login changes, also test manually from the packaged app and note permission prompts.
+The `Tests/MicMinderTests/` target covers playback ownership, fades, settings and permission refresh. Run `swift test` for regression checks. For behavior changes, at minimum run `swift build` and `./script/build_and_run.sh --verify`. For microphone, accessibility, media playback, or launch-at-login changes, also test manually from the packaged app and note permission prompts.
 
 If adding tests, create `Tests/MicMinderTests/` and keep test names behavior-focused, such as `testRestoresOnlyPlaybackPausedByApp`.
 

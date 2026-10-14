@@ -339,14 +339,11 @@ final class PlaybackSessionTests: XCTestCase {
     XCTAssertEqual(h.commands, ["pause:com.spotify.client", "play:com.spotify.client"])
   }
 
-  func testMissingPermissionsDoNotOpenWindowsFromMonitoring() async {
+  func testMissingPermissionsDoNotSendPlaybackCommands() async {
     let h = Harness()
     h.automationGranted = false
-    var windowsRequested = 0
-    h.model.onPermissionAuthorizationNeeded = { windowsRequested += 1 }
     await h.emit(active: true)
     await h.emit(active: true)
-    XCTAssertEqual(windowsRequested, 0)
     XCTAssertEqual(h.commands, [])
   }
 

@@ -3,14 +3,15 @@ import CoreServices
 import Foundation
 
 final class PermissionAuthorizationService {
-  static let setupPlayers = Array(ScriptableMediaPlayer.supportedPlayers.prefix(2))
+  static let setupPlayers = ScriptableMediaPlayer.supportedPlayers
+
+  static func connectionStatus(for player: ScriptableMediaPlayer) -> (authorized: Bool, denied: Bool) {
+    let status = automationPermissionStatus(for: player, askUserIfNeeded: false)
+    return (status == noErr, status == OSStatus(errAEEventNotPermitted))
+  }
 
   static func hasAutomationPermission(for player: ScriptableMediaPlayer) -> Bool {
     automationPermissionStatus(for: player, askUserIfNeeded: false) == noErr
-  }
-
-  static func isDenied(_ player: ScriptableMediaPlayer) -> Bool {
-    automationPermissionStatus(for: player, askUserIfNeeded: false) == OSStatus(errAEEventNotPermitted)
   }
 
   @discardableResult

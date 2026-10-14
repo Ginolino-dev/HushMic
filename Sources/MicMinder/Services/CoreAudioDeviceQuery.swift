@@ -27,14 +27,6 @@ enum CoreAudioDeviceQuery {
     }
   }
 
-  static func isInputDeviceRunning(_ device: AudioDeviceID) -> Bool {
-    isDeviceRunningSomewhere(device, scope: kAudioDevicePropertyScopeInput)
-  }
-
-  static func activeInputDeviceIDs() throws -> [AudioDeviceID] {
-    try activeInputDeviceIDs(for: processObjectIDs())
-  }
-
   static func activeInputDeviceIDs(for processes: [AudioObjectID]) throws -> [AudioDeviceID] {
     let activeProcessDevices = try processes
       .filter(isProcessRunningInput)
@@ -43,32 +35,6 @@ enum CoreAudioDeviceQuery {
     // An empty successful process query means no input is running. Device
     // global activity also includes speaker output on duplex devices.
     return Array(Set(activeProcessDevices))
-  }
-
-  static func isOutputRunning(forBundleIdentifier bundleIdentifier: String) -> Bool {
-    isOutputRunning(forBundleIdentifiers: [bundleIdentifier])
-  }
-
-  static func isOutputRunning(forBundleIdentifiers bundleIdentifiers: [String]) -> Bool {
-    isProcessRunning(forBundleIdentifiers: bundleIdentifiers, check: isProcessRunningOutput)
-  }
-
-  static func isInputRunning(forBundleIdentifiers bundleIdentifiers: [String]) -> Bool {
-    isProcessRunning(forBundleIdentifiers: bundleIdentifiers, check: isProcessRunningInput)
-  }
-
-  private static func isProcessRunning(
-    forBundleIdentifiers bundleIdentifiers: [String],
-    check: (AudioObjectID) -> Bool
-  ) -> Bool {
-    let bundleIdentifierSet = Set(bundleIdentifiers)
-    return (try? processObjectIDs().contains { process in
-      guard let bundleIdentifier = processBundleIdentifier(process) else {
-        return false
-      }
-
-      return bundleIdentifierSet.contains(bundleIdentifier) && check(process)
-    }) ?? false
   }
 
   static func deviceName(_ device: AudioDeviceID) -> String {
@@ -173,36 +139,6 @@ enum CoreAudioDeviceQuery {
     processFlag(process, selector: kAudioProcessPropertyIsRunningInput)
   }
 
-  private static func isProcessRunningOutput(_ process: AudioObjectID) -> Bool {
-    processFlag(process, selector: kAudioProcessPropertyIsRunningOutput)
-  }
-
-  private static func processBundleIdentifier(_ process: AudioObjectID) -> String? {
-    var address = AudioObjectPropertyAddress(
-      mSelector: kAudioProcessPropertyBundleID,
-      mScope: kAudioObjectPropertyScopeGlobal,
-      mElement: kAudioObjectPropertyElementMain
-    )
-    var dataSize = UInt32(MemoryLayout<CFString?>.size)
-    let bundleIDStorage = UnsafeMutableRawPointer.allocate(
-      byteCount: Int(dataSize),
-      alignment: MemoryLayout<CFString?>.alignment
-    )
-    let bundleIDPointer = bundleIDStorage.bindMemory(to: CFString?.self, capacity: 1)
-    bundleIDPointer.initialize(to: nil)
-    defer {
-      bundleIDPointer.deinitialize(count: 1)
-      bundleIDStorage.deallocate()
-    }
-
-    let status = AudioObjectGetPropertyData(process, &address, 0, nil, &dataSize, bundleIDStorage)
-    guard status == noErr, let bundleIdentifier = bundleIDPointer.pointee else {
-      return nil
-    }
-
-    return bundleIdentifier as String
-  }
-
   private static func processFlag(_ process: AudioObjectID, selector: AudioObjectPropertySelector) -> Bool {
     var address = AudioObjectPropertyAddress(
       mSelector: selector,
@@ -213,19 +149,6 @@ enum CoreAudioDeviceQuery {
     var dataSize = UInt32(MemoryLayout<UInt32>.size)
 
     let status = AudioObjectGetPropertyData(process, &address, 0, nil, &dataSize, &value)
-    return status == noErr && value != 0
-  }
-
-  private static func isDeviceRunningSomewhere(_ device: AudioDeviceID, scope: AudioObjectPropertyScope) -> Bool {
-    var address = AudioObjectPropertyAddress(
-      mSelector: kAudioDevicePropertyDeviceIsRunningSomewhere,
-      mScope: scope,
-      mElement: kAudioObjectPropertyElementMain
-    )
-    var value: UInt32 = 0
-    var dataSize = UInt32(MemoryLayout<UInt32>.size)
-
-    let status = AudioObjectGetPropertyData(device, &address, 0, nil, &dataSize, &value)
     return status == noErr && value != 0
   }
 
