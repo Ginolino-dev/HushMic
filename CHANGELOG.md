@@ -53,7 +53,7 @@
 - Clarified microphone-triggered call use cases and browser-support limitations.
 
 
-These notes describe the local development builds. No downloadable GitHub release has been published yet. Browser-control experiments are separate from the installed MicMinder app.
+Version 1.1.6 is the first downloadable testing release, for Apple Silicon Macs. Earlier entries describe development builds. Browser-control experiments are separate from the installed MicMinder app.
 
 ## 1.0.3 — 14 October 2026
 

@@ -21,9 +21,11 @@ MicMinder is a small macOS menu bar app that automatically pauses your music whe
 
 ## Current version and availability
 
-The current local build is **1.1.6**, with a compact native Apple popover, adaptive appearance and custom note-and-pause icon. Apple Music and Spotify were retested with the installed 1.1.6 build; playback logs confirmed fade-out, pause, resume and fade-in. All 54 automated regression tests pass.
+The current version is **1.1.6**, with a compact native Apple popover, adaptive appearance and custom note-and-pause icon. Apple Music and Spotify were retested with the installed 1.1.6 build; playback logs confirmed fade-out, pause, resume and fade-in. All 54 automated regression tests pass.
 
-**There is no published downloadable release yet.** For now, build from source using the instructions below. Local app bundles use ad hoc signing and are not Developer ID signed or notarized. See [release notes](CHANGELOG.md) for the version history and [GitHub Releases](https://github.com/Ginolino-dev/MicMinder/releases) for future published builds.
+Download **1.1.6 for Apple Silicon Macs (M1 or later)** from [GitHub Releases](https://github.com/Ginolino-dev/MicMinder/releases/tag/v1.1.6). Requires macOS 14 or later. An Intel build is not included.
+
+This initial testing release uses ad hoc signing and is **not Developer ID signed or notarized**. After downloading, unzip it, move MicMinder to Applications, and open it. If macOS blocks it, use **System Settings → Privacy & Security → Open Anyway** after attempting to open it, only if you trust this download. Do not disable Gatekeeper. A SHA-256 checksum is included with the release.
 
 ## Performance
 
