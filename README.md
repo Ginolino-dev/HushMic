@@ -1,129 +1,91 @@
+<p align="center">
+  <img src="design/MicMinder-icon.png" alt="MicMinder teal microphone and pause icon" width="120">
+</p>
+
 # MicMinder
 
-[中文](README.zh-CN.md)
+**Music takes a break when your microphone is in use.**
 
-MicMinder is a lightweight macOS menu bar utility that watches microphone activity and keeps your media playback out of the way. When the microphone becomes active, it can pause the currently playing media. When the microphone becomes idle again, it only resumes media playback that MicMinder paused.
+MicMinder is a small macOS menu bar app that automatically pauses your music when the microphone becomes active, then resumes the playback it paused when the microphone becomes idle. It is useful for voice input, calls, and recording while listening to music.
 
-MicMinder is written in Swift as a Swift Package Manager executable. It uses AppKit for the menu bar app shell and permission window, CoreAudio for microphone activity detection, ServiceManagement for launch-at-login registration, and AppleScript for playback control.
+[Setup](#get-started) · [Release notes](CHANGELOG.md) · [Build from source](#build-from-source) · [Report an issue](https://github.com/Ginolino-dev/MicMinder/issues) · [简体中文](README.zh-CN.md)
 
-## Why
+## What it does
 
-MicMinder was built for Vibe Coding workflows, especially when using tools like Codex or Claude Code with speech-to-text to talk to an AI model while coding. If music or a podcast keeps playing in the background, that audio can leak into the microphone and reduce transcription quality. MicMinder removes that friction by pausing playback while the microphone is in use, then restoring only the media playback it paused.
+- **Automatic pause and resume:** controls Apple Music and Spotify with explicit player commands.
+- **Optional music fades:** aims for a half-second fade-out before pausing and fade-in after playback resumes. Changes the player's volume, not your Mac's system volume.
+- **Careful playback restoration:** confirms a pause before owning its resume, and skips resuming if the track or player changes, playback restarts, permission is lost, or automatic control is disabled.
+- **Simple setup:** a first-launch welcome window helps connect your player. Playback Permissions remains available from the menu.
+- **Menu bar controls:** switch Auto Pause/Resume or Fade Music on and off, view microphone activity, and enable Launch at Login.
+- **English and Simplified Chinese:** choose a language or follow your system preference.
 
-## Screenshots
+## Current version and availability
 
-These screenshots show the upstream HushMic interface; this fork is named MicMinder.
+The current tested local build is **1.0.3**. Apple Music pause/resume and both fades have been manually confirmed; Spotify support is implemented and still needs the same live validation. The version's development verification included 43 passing regression tests.
 
-| Menu | Permissions |
+**There is no published downloadable release yet.** For now, build from source using the instructions below. Local app bundles use ad hoc signing and are not Developer ID signed or notarized. See [release notes](CHANGELOG.md) for the version history and [GitHub Releases](https://github.com/Ginolino-dev/MicMinder/releases) for future published builds.
+
+## Get started
+
+1. Put `MicMinder.app` in **Applications** and open it.
+2. In the welcome window, enable **Apple Music** or **Spotify** and allow macOS's Automation request. Spotify requires its desktop app, available from [Spotify's website](https://www.spotify.com/download/mac/).
+3. Play some music, then start and stop microphone input. MicMinder should pause and resume that playback.
+4. Use the microphone icon in your menu bar to change settings. You can skip setup and return to **Playback Permissions…** later.
+
+If you previously denied permission, the setup window links to **System Settings → Privacy & Security → Automation**. Enable the player under MicMinder there.
+
+### Everyday controls
+
+| Control | What it does |
 | --- | --- |
-| ![MicMinder English menu](Screenshot/en_menu.png) | ![MicMinder English permission window](Screenshot/en_authorization.png) |
+| Auto Pause/Resume | Enables automatic playback control. Turning it off cancels any pending resume; already-paused music stays paused until you press Play. |
+| Fade Music | Enables player-volume fades around pause and resume. Your volume changes while paused are respected. |
+| Playback Permissions… | Shows player connection status and helps authorize playback control. |
+| Launch at Login | Starts the installed app when you log in. |
 
-## What It Does
+## Supported behavior and limitations
 
-- Shows the current microphone state from the macOS menu bar.
-- Detects active input devices through CoreAudio.
-- Automatically pauses media when microphone input starts.
-- Optional half-second player-volume fades before pausing and when resuming; system volume is unchanged.
-- Restores only media playback that MicMinder paused.
-- Supports Music, Spotify, and iTunes through AppleScript playback state checks.
-- Shows a first-launch welcome window to connect Apple Music or Spotify.
-- Provides English, Simplified Chinese, and automatic language selection.
-- Can register the packaged app as a macOS login item.
+Microphone detection is system-wide, rather than specific to Codex. Codex voice input has been tested. Other apps that activate the microphone should trigger the same behavior, but individual call and recording apps still need validation.
 
-## Requirements
+MicMinder detects **microphone use, not speech**. If a meeting app keeps the microphone active, music can remain paused throughout the call. Muting inside an app does not necessarily release the microphone.
 
-- macOS 14 or later.
-- Swift 5.9 toolchain from Xcode or Xcode Command Line Tools.
+- The installed app controls native players. **Browser players are not supported in this version.** A separate Chrome/YouTube prototype has demonstrated pause/resume, but latency and media identity need further validation.
+- App exclusions and website exclusions are not implemented.
+- Music that was already paused should remain paused. Changing tracks, restarting playback yourself, or disabling automatic control relinquishes the pending resume.
+- Track identifiers must be readable; unsupported streams may be skipped. Brief changes between activity checks may not be observable.
+- Fade timing depends on how quickly the player responds to automation commands.
 
-## Build
+## Privacy and permissions
 
-Compile the SwiftPM executable:
+MicMinder observes microphone activity through CoreAudio. It does **not record microphone audio**. The app has no audio capture pipeline or network telemetry.
+
+Playback control needs **Automation permission for each player**. No Accessibility permission is required, and there is no global media-key test. Authorization is requested through the setup window, not silently by background monitoring.
+
+## Build from source
+
+Running the app requires **macOS 14 or later**. Building also requires the Swift 5.9 or newer toolchain supplied by Xcode or Xcode Command Line Tools.
 
 ```bash
-swift build
+git clone https://github.com/Ginolino-dev/MicMinder.git
+cd MicMinder
+BUILD_CONFIGURATION=release APP_VERSION=1.0.3 APP_BUILD_NUMBER=5 ./script/build_and_run.sh --package
 ```
 
-Build and package the app into `dist/MicMinder.app`:
+Copy `dist/MicMinder.app` to Applications and open that copy. The bundle contains its executable, icon, and language resources, so it runs independently of the source checkout and build caches. Enable Launch at Login from the installed copy.
+
+### Development and verification
 
 ```bash
-./script/build_and_run.sh --package
-```
-
-Build, package, and open the app:
-
-```bash
-./script/build_and_run.sh
-```
-
-Build, package, launch, and verify the process started:
-
-```bash
+swift test
 ./script/build_and_run.sh --verify
 ```
 
-## Install
+The packaging script defaults to a debug build. Set `BUILD_CONFIGURATION=release` for an optimized build. Its `--logs`, `--telemetry`, and `--debug` modes support local debugging; `--telemetry` streams local diagnostic logs and does not upload them.
 
-Build an optimized standalone release:
+The bundle identifier is `dev.ginolino.MicMinder`. Renaming or moving from HushMic may require fresh Automation authorization.
 
-```bash
-BUILD_CONFIGURATION=release APP_VERSION=1.0.0 ./script/build_and_run.sh --package
-```
+## Credits and license
 
-Copy `dist/MicMinder.app` into `/Applications` and open that copy. The installed
-app includes its executable and language resources; it does not depend on the
-development folder or compiler caches. Enable Launch at Login from the installed
-copy if desired.
+MicMinder is a fork of [HushMic by location-txl](https://github.com/location-txl/HushMic), with playback restoration fixes, optional permission setup, event-driven microphone monitoring, a standalone release bundle, new branding, and music fades.
 
-This fork uses bundle identifier `dev.ginolino.MicMinder`. macOS may request
-fresh Automation permission when migrating from HushMic. Local builds are
-signed ad hoc; public distribution requires a separate signing and notarization
-workflow.
-
-## Development Commands
-
-```bash
-./script/build_and_run.sh --logs
-```
-
-Streams logs for the `MicMinder` process.
-
-```bash
-./script/build_and_run.sh --telemetry
-```
-
-Streams logs for subsystem `dev.ginolino.MicMinder`.
-
-```bash
-./script/build_and_run.sh --debug
-```
-
-Runs the packaged binary under `lldb`.
-
-## Permissions
-
-Microphone activity monitoring works without granting permissions. Open **Playback Permissions…** from the menu to authorize only the players you want to control. The window can be dismissed with **Done**, **Not Now**, or its close button.
-
-Automatic Music/Spotify/iTunes control uses per-player Automation permission. No Accessibility permission is required. Background monitoring never requests Automation consent.
-
-Automatic control sends explicit pause/play commands, confirms the pause, and remembers the player process and current track. It skips resume if the player quit, the track changed, playback was restarted, permission was revoked, another authorized player is playing, or Auto Pause/Resume was switched off. Granting permission or enabling control during microphone use takes effect on the next activity check.
-
-Browser and other unknown-player audio is left alone: a global play/pause key cannot safely target or restore it. Track identifiers must be readable; unsupported streams are skipped. Brief user changes between activity checks may not be observable.
-
-## Testing
-
-Run the regression suite with `swift test`. For a packaged-app check:
-
-1. Open Music or Spotify and play a track. In MicMinder, open **Playback Permissions…** and authorize that player.
-2. Enable **Auto Pause/Resume**, then start and stop microphone use. The same track should pause and resume.
-3. Repeat with music already paused: it should stay paused.
-4. While the microphone is active, turn auto-control off, change tracks, or manually resume playback. MicMinder should skip its pending resume.
-5. Open the permission window and dismiss it without authorizing. Monitoring and the menu should remain available.
-6. With auto-control off during microphone use, turn it on. A playing authorized track should pause on the next check.
-
-## Launch at Login
-
-The "Launch at Login" menu item registers the packaged `dist/MicMinder.app` bundle as a macOS login item. Use `./script/build_and_run.sh` before testing this flow so the app is running from a real `.app` bundle.
-
-## License
-
-MicMinder is available under the [MIT License](LICENSE).
+Available under the [MIT License](LICENSE).
