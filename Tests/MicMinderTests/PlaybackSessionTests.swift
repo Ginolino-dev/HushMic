@@ -4,6 +4,19 @@ import Combine
 
 @MainActor
 final class PlaybackSessionTests: XCTestCase {
+  func testPausedOwnershipPollAvoidsSeparateStateAndIdentityQueries() async {
+    let h = Harness()
+    await h.emit(active: true)
+    XCTAssertTrue(h.model.pausedByApp)
+    h.stateReads = 0
+    h.identityReads = 0
+    await h.emit(active: true)
+    XCTAssertTrue(h.model.pausedByApp)
+    XCTAssertEqual(h.stateReads, 0)
+    XCTAssertEqual(h.identityReads, 0)
+    h.model.prepareForTermination()
+  }
+
   func testEnablingIdleControlClearsDisabledStatus() async {
     let h = Harness()
     h.model.autoControlEnabled = false
@@ -524,6 +537,8 @@ private final class Harness {
   var onVolumeWrite: () -> Void = {}
   var volumeWrites: [Int] = []
   var state: ReliablePlaybackState
+  var stateReads = 0
+  var identityReads = 0
   var automationGranted = true
   var useGlobalMediaKey = false
   var pauseSucceeds = true
@@ -549,7 +564,7 @@ private final class Harness {
                             player: self.useGlobalMediaKey ? nil : (self.statusPlayer ?? self.player),
                             authorizedPlayers: self.automationGranted ? self.authorizedPlayers : [])
       },
-      state: { [unowned self] _ in self.state },
+      state: { [unowned self] _ in self.stateReads += 1; return self.state },
       pause: { [unowned self] player in
         self.volumeAtPause = self.volume
         self.commands.append("pause:" + player.bundleIdentifier)
@@ -566,7 +581,10 @@ private final class Harness {
       },
       isRunning: { _ in true },
       hasAutomationPermission: { [unowned self] _ in self.automationGranted },
-      identity: { [unowned self] _ in self.identity },
+      pausedIdentity: { [unowned self] _ in
+        self.automationGranted && self.state == .notPlaying ? self.identity : nil
+      },
+      identity: { [unowned self] _ in self.identityReads += 1; return self.identity },
       volume: { [unowned self] _ in self.volume },
       setVolume: { [unowned self] _, value in self.volumeWrites.append(value); self.volume = value; self.onVolumeWrite(); return true },
       now: { [unowned self] in self.time }

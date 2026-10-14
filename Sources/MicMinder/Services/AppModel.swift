@@ -168,9 +168,8 @@ final class AppModel: ObservableObject {
 
     if let player = microphoneSession?.resumeTarget {
       // A user restart, player quit, or lost permission cancels our ownership.
-      guard playback.isRunning(player), playback.hasAutomationPermission(player),
-            playback.state(player) == .notPlaying,
-            playback.identity(player) == microphoneSession?.resumeIdentity else {
+      guard let identity = playback.pausedIdentity(player),
+            identity == microphoneSession?.resumeIdentity else {
         microphoneSession?.resumeTarget = nil
         logger.notice("Resume ownership canceled while microphone active")
         setPausedByApp(false)

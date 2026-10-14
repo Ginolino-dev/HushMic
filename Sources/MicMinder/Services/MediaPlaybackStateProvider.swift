@@ -46,6 +46,17 @@ struct ScriptableMediaPlayer: Equatable {
     ScriptableMediaPlayer(bundleIdentifier: "com.spotify.client", displayName: "Spotify")
   ]
 
+  // At most two stateless scripts. Execution and cache access stay on the main thread.
+  private static let pausedQueries = Dictionary(uniqueKeysWithValues: supportedPlayers.map { player in
+    let property = player.bundleIdentifier == "com.spotify.client" ? "id" : "persistent ID"
+    return (player.bundleIdentifier, ReusableAppleScript(source: """
+      tell application id "\(player.bundleIdentifier)"
+        if (player state as string) is not "paused" then return ""
+        return \(property) of current track as string
+      end tell
+      """))
+  })
+
   var bundleIdentifier: String
   var displayName: String
 
@@ -89,6 +100,19 @@ struct ScriptableMediaPlayer: Equatable {
 
   func play() -> Bool {
     runAppleScript("tell application id \"\(bundleIdentifier)\" to play") != nil
+  }
+
+  func pausedPlaybackIdentity() -> String? {
+    guard let application = NSRunningApplication.runningApplications(withBundleIdentifier: bundleIdentifier).first else {
+      return nil
+    }
+    // Keep the existing polling cadence, but share one permission check and
+    // compiled script for state + identity. Never cache playback or consent.
+    guard let query = Self.pausedQueries[bundleIdentifier],
+          let track = query.execute(processIdentifier: application.processIdentifier, authorized: {
+            PermissionAuthorizationService.hasAutomationPermission(for: self)
+          }), !track.isEmpty, !application.isTerminated else { return nil }
+    return "\(application.processIdentifier):\(track)"
   }
 
   func volume() -> Int? {

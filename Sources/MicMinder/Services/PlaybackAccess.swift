@@ -8,6 +8,8 @@ struct PlaybackAccess {
   var play: (ScriptableMediaPlayer) -> Bool
   var isRunning: (ScriptableMediaPlayer) -> Bool
   var hasAutomationPermission: (ScriptableMediaPlayer) -> Bool
+  // One authorized query returns identity only while the same player is paused.
+  var pausedIdentity: (ScriptableMediaPlayer) -> String?
   var identity: (ScriptableMediaPlayer) -> String? = { _ in nil }
   var volume: (ScriptableMediaPlayer) -> Int? = { _ in nil }
   var setVolume: (ScriptableMediaPlayer, Int) -> Bool = { _, _ in false }
@@ -22,6 +24,10 @@ struct PlaybackAccess {
       play: { $0.play() },
       isRunning: { $0.isRunning },
       hasAutomationPermission: { PlayerControlSettings.shared.isEnabled($0.bundleIdentifier) && PermissionAuthorizationService.hasAutomationPermission(for: $0) },
+      pausedIdentity: { player in
+        guard PlayerControlSettings.shared.isEnabled(player.bundleIdentifier) else { return nil }
+        return player.pausedPlaybackIdentity()
+      },
       identity: { $0.playbackIdentity() },
       volume: { $0.volume() },
       setVolume: { $0.setVolume($1) }

@@ -1,5 +1,20 @@
 # Release notes
 
+## 1.1.6
+
+- Reduce locally measured sustained microphone-active CPU from 4.16% to 2.98% of one core; see [performance results](docs/PERFORMANCE.md) for methodology and limits.
+
+- Reuse the compiled paused-player query instead of compiling it on every poll, with at most one cached script per supported player.
+- Continue checking current Automation permission and reading fresh playback state on every execution.
+- Discard compiled scripts after player restarts or execution errors; prevent reentrant execution.
+- Add four real AppleScript regressions for reuse, fresh results, authorization, restart and error handling; all 54 tests pass.
+
+## 1.1.5
+
+- Combine paused-state and track-identity queries during microphone sessions, avoiding redundant Automation permission checks.
+- Preserve the quarter-second observation interval, immediate resume checks and existing fade behavior.
+- Add a regression for avoiding separate state and identity queries during pause ownership checks; all 50 tests pass.
+
 ## 1.1.4
 
 - Audit native playback, permissions, resource use and release packaging.

@@ -21,9 +21,13 @@ MicMinder is a small macOS menu bar app that automatically pauses your music whe
 
 ## Current version and availability
 
-The current local build is **1.1.4**, with a compact native Apple popover, adaptive appearance and custom note-and-pause icon. Apple Music and Spotify pause/resume and both fades were manually confirmed in 1.0.4; the interface update retains that playback behavior and passes 49 automated regression tests.
+The current local build is **1.1.6**, with a compact native Apple popover, adaptive appearance and custom note-and-pause icon. Apple Music and Spotify were retested with the installed 1.1.6 build; playback logs confirmed fade-out, pause, resume and fade-in. All 54 automated regression tests pass.
 
 **There is no published downloadable release yet.** For now, build from source using the instructions below. Local app bundles use ad hoc signing and are not Developer ID signed or notarized. See [release notes](CHANGELOG.md) for the version history and [GitHub Releases](https://github.com/Ginolino-dev/MicMinder/releases) for future published builds.
+
+## Performance
+
+In local Apple Music testing, sustained microphone-active CPU averaged **2.98% of one core**, down from 6.72% before the query optimizations. Idle samples returned to 0%. These are measurements on one Mac, not guarantees for every device or player. The optimization preserves fresh permission and playback checks. See the [measurement method and results](docs/PERFORMANCE.md).
 
 ## Get started
 
@@ -68,7 +72,7 @@ Running the app requires **macOS 14 or later**. Building requires Xcode 26 or la
 ```bash
 git clone https://github.com/Ginolino-dev/MicMinder.git
 cd MicMinder
-BUILD_CONFIGURATION=release APP_VERSION=1.1.4 APP_BUILD_NUMBER=7 ./script/build_and_run.sh --package
+BUILD_CONFIGURATION=release APP_VERSION=1.1.6 APP_BUILD_NUMBER=9 ./script/build_and_run.sh --package
 ```
 
 Copy `dist/MicMinder.app` to Applications and open that copy. The bundle contains its executable, icon, and interface resources, so it runs independently of the source checkout and build caches. Enable Launch at Login from the installed copy.
