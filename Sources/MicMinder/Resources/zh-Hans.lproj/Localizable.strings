@@ -51,7 +51,7 @@
 /* Permissions */
 "permission.accessibility" = "辅助功能权限";
 "permission.automation %@" = "%@ 自动化权限";
-"permission.window.title" = "HushMic 权限授权";
+"permission.window.title" = "MicMinder 权限授权";
 "permission.window.heading" = "可选播放权限";
 "permission.window.message" = "监听麦克风活动无需授权。如需自动暂停和恢复，请授权 Music 或 Spotify。辅助功能仅用于手动测试媒体键。可随时关闭此窗口。";
 "permission.window.status_needed" = "未授权";
@@ -74,7 +74,7 @@
 /* Launch at login */
 "login.still_enabled" = "登录项仍处于开启状态";
 "login.not_registered" = "登录项未完成注册";
-"login.requires_approval" = "需要在系统设置的登录项中允许 HushMic";
+"login.requires_approval" = "需要在系统设置的登录项中允许 MicMinder";
 "login.not_found" = "当前应用包不可注册为登录项";
 "login.unknown_status" = "登录项状态未知";
 

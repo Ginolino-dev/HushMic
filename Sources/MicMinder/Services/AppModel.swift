@@ -39,7 +39,7 @@ final class AppModel: ObservableObject {
   private let microphoneMonitor: MicrophoneMonitoring
   private let playback: PlaybackAccess
   private let defaults: UserDefaults
-  private let logger = Logger(subsystem: "com.location.HushMic", category: "Playback")
+  private let logger = Logger(subsystem: "dev.ginolino.MicMinder", category: "Playback")
   private var microphoneSession: MicrophoneSession?
   private var permissionTimer: Timer?
   private var playbackTimer: Timer?

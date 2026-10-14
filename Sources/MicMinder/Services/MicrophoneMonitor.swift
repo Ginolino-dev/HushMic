@@ -11,7 +11,7 @@ protocol MicrophoneMonitoring: AnyObject {
 final class MicrophoneMonitor: MicrophoneMonitoring {
   var onChange: ((MicrophoneSnapshot) -> Void)?
 
-  private let queue = DispatchQueue(label: "com.location.HushMic.microphone")
+  private let queue = DispatchQueue(label: "dev.ginolino.MicMinder.microphone")
   private var deviceListeners: [RegisteredAudioListener] = []
   private var processListeners: [RegisteredAudioListener] = []
   private var systemListeners: [RegisteredAudioListener] = []

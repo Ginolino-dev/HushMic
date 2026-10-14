@@ -42,7 +42,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     displayedStatusIcon = icon
     let image = NSImage(
       systemSymbolName: icon,
-      accessibilityDescription: "HushMic"
+      accessibilityDescription: "MicMinder"
     )
     image?.isTemplate = true
     button.image = image
@@ -172,7 +172,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   }
 
   @objc private func openGitHub() {
-    guard let url = URL(string: "https://github.com/location-txl/HushMic") else {
+    guard let url = URL(string: "https://github.com/Ginolino-dev/HushMic") else {
       return
     }
     NSWorkspace.shared.open(url)
@@ -207,7 +207,7 @@ extension AppDelegate: NSMenuDelegate {
 }
 
 @main
-struct HushMicApp: App {
+struct MicMinderApp: App {
   @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
   var body: some Scene {

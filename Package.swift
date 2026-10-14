@@ -3,16 +3,16 @@
 import PackageDescription
 
 let package = Package(
-  name: "HushMic",
+  name: "MicMinder",
   platforms: [
     .macOS(.v14)
   ],
   products: [
-    .executable(name: "HushMic", targets: ["HushMic"])
+    .executable(name: "MicMinder", targets: ["MicMinder"])
   ],
   targets: [
     .executableTarget(
-      name: "HushMic",
+      name: "MicMinder",
       exclude: ["Resources"],
       linkerSettings: [
         .linkedFramework("ApplicationServices"),
@@ -21,6 +21,6 @@ let package = Package(
         .linkedFramework("ServiceManagement")
       ]
     ),
-    .testTarget(name: "HushMicTests", dependencies: ["HushMic"])
+    .testTarget(name: "MicMinderTests", dependencies: ["MicMinder"])
   ]
 )

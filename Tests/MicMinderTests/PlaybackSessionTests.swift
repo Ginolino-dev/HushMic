@@ -1,6 +1,6 @@
 import XCTest
 import Combine
-@testable import HushMic
+@testable import MicMinder
 
 @MainActor
 final class PlaybackSessionTests: XCTestCase {
@@ -288,7 +288,7 @@ private final class Harness {
   let monitor = TestMicrophoneMonitor()
   let player = ScriptableMediaPlayer(bundleIdentifier: "com.spotify.client", displayName: "Spotify")
   let defaults: UserDefaults
-  let suiteName = "HushMicTests." + UUID().uuidString
+  let suiteName = "MicMinderTests." + UUID().uuidString
   var model: AppModel!
   var state: ReliablePlaybackState
   var accessibilityGranted = true

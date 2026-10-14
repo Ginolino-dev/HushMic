@@ -51,7 +51,7 @@
 /* Permissions */
 "permission.accessibility" = "Accessibility permission";
 "permission.automation %@" = "%@ automation permission";
-"permission.window.title" = "HushMic Permissions";
+"permission.window.title" = "MicMinder Permissions";
 "permission.window.heading" = "Optional Playback Permissions";
 "permission.window.message" = "Microphone activity monitoring works without permissions. Authorize Music or Spotify only if you want automatic pause/resume. Accessibility is only needed for the manual Test Media Key button. You can close this window at any time.";
 "permission.window.status_needed" = "Not authorized";
@@ -74,7 +74,7 @@
 /* Launch at login */
 "login.still_enabled" = "Login item is still enabled";
 "login.not_registered" = "Login item registration incomplete";
-"login.requires_approval" = "Please allow HushMic in System Settings > Login Items";
+"login.requires_approval" = "Please allow MicMinder in System Settings > Login Items";
 "login.not_found" = "Current app bundle cannot be registered as login item";
 "login.unknown_status" = "Unknown login item status";
 

@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   release:
-    name: Build and publish HushMic
+    name: Build and publish MicMinder
     runs-on: macos-latest
 
     steps:
@@ -35,7 +35,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          codesign --verify --deep --strict --verbose=4 dist/HushMic.app
+          codesign --verify --deep --strict --verbose=4 dist/MicMinder.app
 
       - name: Archive app bundle
         shell: bash
@@ -43,10 +43,10 @@ jobs:
           set -euo pipefail
           TAG="${GITHUB_REF_NAME}"
           VERSION="${TAG#v}"
-          ZIP_PATH="dist/HushMic-${VERSION}-macos.zip"
+          ZIP_PATH="dist/MicMinder-${VERSION}-macos.zip"
 
           rm -f "$ZIP_PATH"
-          (cd dist && ditto -c -k --keepParent HushMic.app "HushMic-${VERSION}-macos.zip")
+          (cd dist && ditto -c -k --keepParent MicMinder.app "MicMinder-${VERSION}-macos.zip")
           echo "ZIP_PATH=$ZIP_PATH" >> "$GITHUB_ENV"
 
       - name: Publish GitHub release
@@ -57,13 +57,13 @@ jobs:
           set -euo pipefail
           TAG="${GITHUB_REF_NAME}"
           VERSION="${TAG#v}"
-          ASSET_LABEL="HushMic ${VERSION} for macOS"
+          ASSET_LABEL="MicMinder ${VERSION} for macOS"
 
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" "$ZIP_PATH#$ASSET_LABEL" --clobber
           else
             gh release create "$TAG" "$ZIP_PATH#$ASSET_LABEL" \
-              --title "HushMic ${VERSION}" \
+              --title "MicMinder ${VERSION}" \
               --generate-notes \
               --verify-tag
           fi
