@@ -23,7 +23,7 @@ HushMic was built for Vibe Coding workflows, especially when using tools like Co
 - Automatically pauses media when microphone input starts.
 - Restores only media playback that HushMic paused.
 - Supports Music, Spotify, and iTunes through AppleScript playback state checks.
-- Uses media key control for supported players that do not expose a reliable playback state.
+- Keeps global media keys manual; browser and unknown-player audio is not automatically toggled.
 - Provides English, Simplified Chinese, and automatic language selection.
 - Can register the packaged app as a macOS login item.
 
@@ -90,9 +90,24 @@ Runs the packaged binary under `lldb`.
 
 ## Permissions
 
-HushMic needs Accessibility permission to send media key events. When controlling Music, Spotify, or iTunes directly, macOS may also show an Automation permission prompt.
+Microphone activity monitoring works without granting permissions. Open **Playback Permissions…** from the menu to authorize only the players you want to control. The window can be dismissed with **Done**, **Not Now**, or its close button.
 
-The app intentionally avoids toggling playback when it cannot confirm the current playback state. macOS does not expose one public, universal API for pausing every possible media app, so HushMic prefers skipping automation over accidentally starting audio that was already paused.
+Automatic Music/Spotify/iTunes control uses per-player Automation permission. Accessibility is optional and is only used by **Test Media Key**. Background monitoring never requests Automation consent.
+
+Automatic control sends explicit pause/play commands, confirms the pause, and remembers the player process and current track. It skips resume if the player quit, the track changed, playback was restarted, permission was revoked, another authorized player is playing, or Auto Pause/Resume was switched off. Granting permission or enabling control during microphone use takes effect on the next activity check.
+
+Browser and other unknown-player audio is left alone: a global play/pause key cannot safely target or restore it. The manual media-key button remains available. Track identifiers must be readable; unsupported streams are skipped. Brief user changes between activity checks may not be observable.
+
+## Testing
+
+Run the regression suite with `swift test`. For a packaged-app check:
+
+1. Open Music or Spotify and play a track. In HushMic, open **Playback Permissions…** and authorize that player. Accessibility can remain off.
+2. Enable **Auto Pause/Resume**, then start and stop microphone use. The same track should pause and resume.
+3. Repeat with music already paused: it should stay paused.
+4. While the microphone is active, turn auto-control off, change tracks, or manually resume playback. HushMic should skip its pending resume.
+5. Open the permission window and dismiss it without authorizing. Monitoring and the menu should remain available.
+6. With auto-control off during microphone use, turn it on. A playing authorized track should pause on the next check.
 
 ## Launch at Login
 

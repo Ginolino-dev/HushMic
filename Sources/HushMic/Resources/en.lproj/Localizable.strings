@@ -3,7 +3,7 @@
 "menu.launch_at_login" = "Launch at Login";
 "menu.language" = "Language";
 "menu.refresh" = "Refresh Status";
-"menu.authorize_accessibility" = "Authorize Accessibility";
+"menu.authorize_accessibility" = "Playback Permissions…";
 "menu.test_media_key" = "Test Media Key";
 "menu.version %@" = "Version %@";
 "menu.github" = "GitHub";
@@ -21,7 +21,7 @@
 "status.mic_idle" = "Microphone Idle";
 "status.no_microphone" = "No Microphone Found";
 "status.accessibility_granted" = "Accessibility Authorized";
-"status.accessibility_needed" = "Accessibility Permission Required";
+"status.accessibility_needed" = "Accessibility: Optional (Manual Media Key)";
 
 /* Action messages */
 "action.listening" = "Listening for microphone";
@@ -52,12 +52,12 @@
 "permission.accessibility" = "Accessibility permission";
 "permission.automation %@" = "%@ automation permission";
 "permission.window.title" = "HushMic Permissions";
-"permission.window.heading" = "Complete Permissions";
-"permission.window.message" = "HushMic needs these permissions to pause and resume playback when the microphone is in use. Continue is available only after all permissions are granted.";
+"permission.window.heading" = "Optional Playback Permissions";
+"permission.window.message" = "Microphone activity monitoring works without permissions. Authorize Music or Spotify only if you want automatic pause/resume. Accessibility is only needed for the manual Test Media Key button. You can close this window at any time.";
 "permission.window.status_needed" = "Not authorized";
 "permission.window.status_granted" = "Authorized";
 "permission.window.authorize" = "Authorize";
-"permission.window.confirm" = "Confirm";
+"permission.window.confirm" = "Done";
 "permission.window.quit" = "Quit App";
 "permission.window.all_granted" = "All permissions are complete";
 
@@ -77,3 +77,9 @@
 "login.requires_approval" = "Please allow HushMic in System Settings > Login Items";
 "login.not_found" = "Current app bundle cannot be registered as login item";
 "login.unknown_status" = "Unknown login item status";
+
+"permission.window.later" = "Not Now";
+"action.playback_changed" = "Playback changed, automatic resume skipped";
+"action.pause_failed" = "Could not confirm playback paused";
+
+"coreaudio.observe_activity" = "Observe microphone activity";

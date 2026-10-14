@@ -3,7 +3,7 @@
 "menu.launch_at_login" = "开机自启";
 "menu.language" = "语言";
 "menu.refresh" = "刷新状态";
-"menu.authorize_accessibility" = "授权辅助功能";
+"menu.authorize_accessibility" = "播放权限…";
 "menu.test_media_key" = "测试媒体键";
 "menu.version %@" = "版本 %@";
 "menu.github" = "GitHub";
@@ -21,7 +21,7 @@
 "status.mic_idle" = "麦克风空闲";
 "status.no_microphone" = "未找到麦克风";
 "status.accessibility_granted" = "辅助功能已授权";
-"status.accessibility_needed" = "需要辅助功能权限";
+"status.accessibility_needed" = "辅助功能：可选（手动媒体键）";
 
 /* Action messages */
 "action.listening" = "正在监听麦克风";
@@ -52,12 +52,12 @@
 "permission.accessibility" = "辅助功能权限";
 "permission.automation %@" = "%@ 自动化权限";
 "permission.window.title" = "HushMic 权限授权";
-"permission.window.heading" = "完成权限授权";
-"permission.window.message" = "HushMic 需要以下权限才能在麦克风使用时自动暂停和恢复播放。全部完成后才能确认继续。";
+"permission.window.heading" = "可选播放权限";
+"permission.window.message" = "监听麦克风活动无需授权。如需自动暂停和恢复，请授权 Music 或 Spotify。辅助功能仅用于手动测试媒体键。可随时关闭此窗口。";
 "permission.window.status_needed" = "未授权";
 "permission.window.status_granted" = "已授权";
 "permission.window.authorize" = "去授权";
-"permission.window.confirm" = "确认";
+"permission.window.confirm" = "完成";
 "permission.window.quit" = "退出应用";
 "permission.window.all_granted" = "所有权限已完成";
 
@@ -77,3 +77,9 @@
 "login.requires_approval" = "需要在系统设置的登录项中允许 HushMic";
 "login.not_found" = "当前应用包不可注册为登录项";
 "login.unknown_status" = "登录项状态未知";
+
+"permission.window.later" = "暂不授权";
+"action.playback_changed" = "播放状态已更改，跳过自动恢复";
+"action.pause_failed" = "无法确认播放已暂停";
+
+"coreaudio.observe_activity" = "监听麦克风活动";

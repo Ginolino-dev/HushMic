@@ -29,19 +29,20 @@ enum CoreAudioDeviceQuery {
 
   static func isInputDeviceRunning(_ device: AudioDeviceID) -> Bool {
     isDeviceRunningSomewhere(device, scope: kAudioDevicePropertyScopeInput)
-      || isDeviceRunningSomewhere(device, scope: kAudioObjectPropertyScopeGlobal)
   }
 
   static func activeInputDeviceIDs() throws -> [AudioDeviceID] {
-    let activeProcessDevices = try processObjectIDs()
+    try activeInputDeviceIDs(for: processObjectIDs())
+  }
+
+  static func activeInputDeviceIDs(for processes: [AudioObjectID]) throws -> [AudioDeviceID] {
+    let activeProcessDevices = try processes
       .filter(isProcessRunningInput)
       .flatMap { try processDevices($0, scope: kAudioObjectPropertyScopeInput) }
 
-    if !activeProcessDevices.isEmpty {
-      return Array(Set(activeProcessDevices))
-    }
-
-    return try inputDevices().filter(isInputDeviceRunning)
+    // An empty successful process query means no input is running. Device
+    // global activity also includes speaker output on duplex devices.
+    return Array(Set(activeProcessDevices))
   }
 
   static func isOutputRunning(forBundleIdentifier bundleIdentifier: String) -> Bool {
@@ -124,6 +125,14 @@ enum CoreAudioDeviceQuery {
     AudioObjectPropertyAddress(
       mSelector: kAudioProcessPropertyIsRunningInput,
       mScope: kAudioObjectPropertyScopeGlobal,
+      mElement: kAudioObjectPropertyElementMain
+    )
+  }
+
+  static func processInputDevicesAddress() -> AudioObjectPropertyAddress {
+    AudioObjectPropertyAddress(
+      mSelector: kAudioProcessPropertyDevices,
+      mScope: kAudioObjectPropertyScopeInput,
       mElement: kAudioObjectPropertyElementMain
     )
   }

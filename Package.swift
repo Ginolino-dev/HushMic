@@ -20,6 +20,7 @@ let package = Package(
         .linkedFramework("CoreAudio"),
         .linkedFramework("ServiceManagement")
       ]
-    )
+    ),
+    .testTarget(name: "HushMicTests", dependencies: ["HushMic"])
   ]
 )

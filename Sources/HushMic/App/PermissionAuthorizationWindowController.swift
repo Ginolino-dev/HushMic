@@ -48,8 +48,8 @@ final class PermissionAuthorizationWindowController: NSWindowController, NSWindo
   }
 
   func windowShouldClose(_ sender: NSWindow) -> Bool {
-    NSApplication.shared.terminate(nil)
-    return false
+    stopRefreshTimer()
+    return true
   }
 
   private func makeWindow() {
@@ -87,22 +87,22 @@ final class PermissionAuthorizationWindowController: NSWindowController, NSWindo
     buttonStack.spacing = 10
     buttonStack.translatesAutoresizingMaskIntoConstraints = false
 
-    let quitButton = NSButton(
-      title: localizer.text("permission.window.quit"),
+    let laterButton = NSButton(
+      title: localizer.text("permission.window.later"),
       target: self,
-      action: #selector(quit)
+      action: #selector(confirm)
     )
-    quitButton.bezelStyle = .rounded
+    laterButton.bezelStyle = .rounded
 
     confirmButton.title = localizer.text("permission.window.confirm")
     confirmButton.target = self
     confirmButton.action = #selector(confirm)
     confirmButton.bezelStyle = .rounded
     confirmButton.keyEquivalent = "\r"
-    confirmButton.isEnabled = false
+    confirmButton.isEnabled = true
 
     buttonStack.addArrangedSubview(NSView())
-    buttonStack.addArrangedSubview(quitButton)
+    buttonStack.addArrangedSubview(laterButton)
     buttonStack.addArrangedSubview(confirmButton)
 
     contentStack.addArrangedSubview(titleLabel)
@@ -130,14 +130,9 @@ final class PermissionAuthorizationWindowController: NSWindowController, NSWindo
   }
 
   private func refreshPermissions() {
-    for permission in permissionService.missingPermissions() where !displayedPermissions.contains(permission) {
-      displayedPermissions.append(permission)
-    }
-
-    let allGranted = displayedPermissions.allSatisfy {
-      permissionService.isGranted($0)
-    }
-    confirmButton.isEnabled = !displayedPermissions.isEmpty && allGranted
+    // Recompute instead of retaining requests for players that have quit.
+    displayedPermissions = permissionService.missingPermissions()
+    confirmButton.isEnabled = true
 
     permissionStack.arrangedSubviews.forEach { view in
       permissionStack.removeArrangedSubview(view)
@@ -206,7 +201,7 @@ final class PermissionAuthorizationWindowController: NSWindowController, NSWindo
       appModel.openAccessibilitySettings()
       refreshPermissions()
     case .automation(let player):
-      DispatchQueue.global(qos: .userInitiated).async {
+      DispatchQueue.global(qos: .userInitiated).async { [weak self] in
         PermissionAuthorizationService.requestAutomationPermission(for: player)
 
         DispatchQueue.main.async { [weak self] in
@@ -232,19 +227,10 @@ final class PermissionAuthorizationWindowController: NSWindowController, NSWindo
   }
 
   @objc private func confirm() {
-    guard permissionService.missingPermissions().isEmpty else {
-      refreshPermissions()
-      return
-    }
-
     stopRefreshTimer()
     appModel.refresh()
     window?.delegate = nil
     window?.close()
-  }
-
-  @objc private func quit() {
-    NSApplication.shared.terminate(nil)
   }
 }
 

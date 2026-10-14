@@ -7,8 +7,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   private let localizer = AppLocalizer()
   private let permissionService = PermissionAuthorizationService()
   private var statusItem: NSStatusItem?
+  private var displayedStatusIcon: String?
   private var cancellables: Set<AnyCancellable> = []
-  private var isCheckingPermissions = false
   private var permissionWindowController: PermissionAuthorizationWindowController?
 
   func applicationDidFinishLaunching(_ notification: Notification) {
@@ -30,7 +30,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
       }
       .store(in: &cancellables)
 
-    presentPermissionConfirmationIfNeeded()
   }
 
   private func updateStatusIcon() {
@@ -38,8 +37,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
       return
     }
 
+    let icon = appModel.menuBarIcon
+    guard displayedStatusIcon != icon else { return }
+    displayedStatusIcon = icon
     let image = NSImage(
-      systemSymbolName: appModel.menuBarIcon,
+      systemSymbolName: icon,
       accessibilityDescription: "HushMic"
     )
     image?.isTemplate = true
@@ -181,28 +183,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   }
 
   private func presentPermissionConfirmationIfNeeded() {
-    if permissionWindowController?.isVisible == true {
-      permissionWindowController?.show()
-      return
-    }
-
-    guard !isCheckingPermissions else {
-      return
-    }
-
-    isCheckingPermissions = true
-    DispatchQueue.global(qos: .userInitiated).async { [permissionService] in
-      let permissions = permissionService.missingPermissions()
-
-      DispatchQueue.main.async { [weak self] in
-        self?.isCheckingPermissions = false
-        guard !permissions.isEmpty else {
-          return
-        }
-
-        self?.showPermissionWindow()
-      }
-    }
+    // Only explicit menu/button actions open this nonmodal window.
+    showPermissionWindow()
   }
 
   private func showPermissionWindow() {
