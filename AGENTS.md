@@ -8,7 +8,7 @@ This is a Swift Package Manager macOS menu bar app. The executable target lives 
 - `Sources/MicMinder/Views/`: SwiftUI menu/status UI.
 - `Sources/MicMinder/Services/`: CoreAudio monitoring, playback control, permissions, launch-at-login, and shared app state.
 - `Sources/MicMinder/Models/`: small data types such as microphone snapshots.
-- `script/build_and_run.sh`: builds, bundles, launches, and verifies the app.
+- `scripts/build_and_run.sh`: builds, bundles, launches, and verifies the app.
 - `dist/` and `.build/` are generated outputs and should not be treated as source.
 
 Keep related feature code close together. Avoid new abstraction layers unless they remove real duplication or make a user-facing behavior easier to change.
@@ -16,11 +16,11 @@ Keep related feature code close together. Avoid new abstraction layers unless th
 ## Build, Test, and Development Commands
 
 - `swift build`: compile the SwiftPM executable target.
-- `./script/build_and_run.sh`: build, package, and open `dist/MicMinder.app`.
-- `./script/build_and_run.sh --verify`: launch the packaged app and confirm the process starts.
-- `./script/build_and_run.sh --logs`: open the app and stream process logs.
-- `./script/build_and_run.sh --telemetry`: stream logs for subsystem `dev.ginolino.MicMinder`.
-- `./script/build_and_run.sh --debug`: run the packaged binary under `lldb`.
+- `./scripts/build_and_run.sh`: build, package, and open `dist/MicMinder.app`.
+- `./scripts/build_and_run.sh --verify`: launch the packaged app and confirm the process starts.
+- `./scripts/build_and_run.sh --logs`: open the app and stream process logs.
+- `./scripts/build_and_run.sh --telemetry`: stream logs for subsystem `dev.ginolino.MicMinder`.
+- `./scripts/build_and_run.sh --debug`: run the packaged binary under `lldb`.
 
 Use the script when testing launch-at-login or permission behavior, because those flows depend on the `.app` bundle.
 
@@ -32,7 +32,7 @@ Keep UI wrappers minimal. Each `View`, `VStack`, `Group`, or helper type should 
 
 ## Testing Guidelines
 
-The `Tests/MicMinderTests/` target covers playback ownership, fades, settings and permission refresh. Run `swift test` for regression checks. For behavior changes, at minimum run `swift build` and `./script/build_and_run.sh --verify`. For microphone, accessibility, media playback, or launch-at-login changes, also test manually from the packaged app and note permission prompts.
+The `Tests/MicMinderTests/` target covers playback ownership, fades, settings and permission refresh. Run `swift test` for regression checks. For behavior changes, at minimum run `swift build` and `./scripts/build_and_run.sh --verify`. For microphone, accessibility, media playback, or launch-at-login changes, also test manually from the packaged app and note permission prompts.
 
 If adding tests, create `Tests/MicMinderTests/` and keep test names behavior-focused, such as `testRestoresOnlyPlaybackPausedByApp`.
 

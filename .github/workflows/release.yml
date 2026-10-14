@@ -31,7 +31,7 @@ jobs:
           APP_VERSION="$VERSION" \
             APP_BUILD_NUMBER="$GITHUB_RUN_NUMBER" \
             BUILD_CONFIGURATION=release \
-            ./script/build_and_run.sh --package
+            ./scripts/build_and_run.sh --package
 
       - name: Verify app signature
         shell: bash

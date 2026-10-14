@@ -74,7 +74,7 @@ Running the app requires **macOS 14 or later**. Building requires Xcode 26 or la
 ```bash
 git clone https://github.com/Ginolino-dev/MicMinder.git
 cd MicMinder
-BUILD_CONFIGURATION=release APP_VERSION=1.1.6 APP_BUILD_NUMBER=9 ./script/build_and_run.sh --package
+BUILD_CONFIGURATION=release APP_VERSION=1.1.6 APP_BUILD_NUMBER=9 ./scripts/build_and_run.sh --package
 ```
 
 Copy `dist/MicMinder.app` to Applications and open that copy. The bundle contains its executable, icon, and interface resources, so it runs independently of the source checkout and build caches. Enable Launch at Login from the installed copy.
@@ -83,7 +83,7 @@ Copy `dist/MicMinder.app` to Applications and open that copy. The bundle contain
 
 ```bash
 swift test
-./script/build_and_run.sh --verify
+./scripts/build_and_run.sh --verify
 ```
 
 The packaging script defaults to a debug build. Set `BUILD_CONFIGURATION=release` for an optimized build. Its `--logs`, `--telemetry`, and `--debug` modes support local debugging; `--telemetry` streams local diagnostic logs and does not upload them.
