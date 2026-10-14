@@ -8,14 +8,13 @@ struct PlaybackAccess {
   var play: (ScriptableMediaPlayer) -> Bool
   var isRunning: (ScriptableMediaPlayer) -> Bool
   var hasAutomationPermission: (ScriptableMediaPlayer) -> Bool
-  var isAccessibilityTrusted: () -> Bool
-  var sendMediaKey: () -> Bool
   var identity: (ScriptableMediaPlayer) -> String? = { _ in nil }
+  var volume: (ScriptableMediaPlayer) -> Int? = { _ in nil }
+  var setVolume: (ScriptableMediaPlayer, Int) -> Bool = { _, _ in false }
   var now: () -> TimeInterval = { ProcessInfo.processInfo.systemUptime }
 
   static func live() -> PlaybackAccess {
     let provider = MediaPlaybackStateProvider()
-    let controller = MediaKeyPlaybackController()
     return PlaybackAccess(
       currentStatus: { provider.currentStatus() },
       state: { $0.playbackState() },
@@ -23,9 +22,9 @@ struct PlaybackAccess {
       play: { $0.play() },
       isRunning: { $0.isRunning },
       hasAutomationPermission: { PermissionAuthorizationService.hasAutomationPermission(for: $0) },
-      isAccessibilityTrusted: { AccessibilityPermission.isTrusted },
-      sendMediaKey: { controller.sendPlayPause() },
-      identity: { $0.playbackIdentity() }
+      identity: { $0.playbackIdentity() },
+      volume: { $0.volume() },
+      setVolume: { $0.setVolume($1) }
     )
   }
 }

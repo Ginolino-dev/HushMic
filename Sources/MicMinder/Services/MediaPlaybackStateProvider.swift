@@ -92,6 +92,17 @@ struct ScriptableMediaPlayer: Equatable {
     runAppleScript("tell application id \"\(bundleIdentifier)\" to play") != nil
   }
 
+  func volume() -> Int? {
+    guard let value = runAppleScript("tell application id \"\(bundleIdentifier)\" to return sound volume"),
+          let volume = Int(value), (0...100).contains(volume) else { return nil }
+    return volume
+  }
+
+  func setVolume(_ volume: Int) -> Bool {
+    guard (0...100).contains(volume) else { return false }
+    return runAppleScript("tell application id \"\(bundleIdentifier)\" to set sound volume to \(volume)") != nil
+  }
+
   private func runAppleScript(_ source: String) -> String? {
     guard isRunning, PermissionAuthorizationService.hasAutomationPermission(for: self) else {
       return nil

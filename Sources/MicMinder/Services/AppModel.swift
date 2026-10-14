@@ -4,7 +4,6 @@ import OSLog
 
 final class AppModel: ObservableObject {
   @Published private(set) var snapshot = MicrophoneSnapshot.unknown
-  @Published private(set) var hasAccessibilityAccess: Bool
   @Published private(set) var lastAction = LocalizedMessage.key("action.listening")
   @Published private(set) var pausedByApp = false
   var onPermissionAuthorizationNeeded: (() -> Void)?
@@ -19,18 +18,26 @@ final class AppModel: ObservableObject {
     }
   }
 
+  @Published var fadeMusicEnabled: Bool {
+    didSet {
+      defaults.set(fadeMusicEnabled, forKey: "fadeMusicEnabled")
+      if fadeMusicEnabled != oldValue { cancelFade() }
+    }
+  }
+
   @Published var autoControlEnabled: Bool {
     didSet {
       defaults.set(autoControlEnabled, forKey: Self.autoControlDefaultsKey)
 
       guard autoControlEnabled != oldValue else { return }
+      cancelFade()
       // Disabling relinquishes ownership; enabling gives the active session a
       // fresh chance to pause on the next microphone snapshot.
       microphoneSession = snapshot.isActive ? MicrophoneSession() : nil
       setPausedByApp(false)
       if !autoControlEnabled { setLastAction(.key("action.auto_control_off")) }
       updatePlaybackTimer()
-      if autoControlEnabled, snapshot.isActive { handle(snapshot) }
+      if autoControlEnabled, snapshot.isActive { handle(snapshot, fromMonitor: false) }
     }
   }
 
@@ -38,10 +45,12 @@ final class AppModel: ObservableObject {
 
   private let microphoneMonitor: MicrophoneMonitoring
   private let playback: PlaybackAccess
+  private let volumeFader: VolumeFadeController
   private let defaults: UserDefaults
   private let logger = Logger(subsystem: "dev.ginolino.MicMinder", category: "Playback")
+  private var handlingSnapshot = false
+  private var queuedSnapshot: MicrophoneSnapshot?
   private var microphoneSession: MicrophoneSession?
-  private var permissionTimer: Timer?
   private var playbackTimer: Timer?
   private var didFinishInitializing = false
   private var isSyncingLaunchAtLogin = false
@@ -50,11 +59,13 @@ final class AppModel: ObservableObject {
        playback: PlaybackAccess = .live(), defaults: UserDefaults = .standard) {
     self.microphoneMonitor = microphoneMonitor
     self.playback = playback
+    volumeFader = VolumeFadeController(playback: playback)
+    fadeMusicEnabled = defaults.object(forKey: "fadeMusicEnabled") as? Bool ?? true
     self.defaults = defaults
-    hasAccessibilityAccess = playback.isAccessibilityTrusted()
     autoControlEnabled = defaults.object(forKey: Self.autoControlDefaultsKey) as? Bool ?? true
     launchAtLoginEnabled = LaunchAtLoginService.isEnabled
 
+    volumeFader.onStepFinished = { [weak self] in self?.drainQueuedSnapshot() }
     microphoneMonitor.onChange = { [weak self] snapshot in
       DispatchQueue.main.async {
         self?.handle(snapshot)
@@ -62,16 +73,12 @@ final class AppModel: ObservableObject {
     }
     microphoneMonitor.start()
 
-    permissionTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
-      self?.refreshAccessibilityStatus()
-    }
-
     didFinishInitializing = true
   }
 
   deinit {
+    volumeFader.cancel()
     microphoneMonitor.stop()
-    permissionTimer?.invalidate()
     playbackTimer?.invalidate()
   }
 
@@ -99,21 +106,8 @@ final class AppModel: ObservableObject {
     snapshot.primaryDeviceName(localizer: localizer)
   }
 
-  func permissionTitle(localizer: AppLocalizer) -> String {
-    hasAccessibilityAccess ? localizer.text("status.accessibility_granted") : localizer.text("status.accessibility_needed")
-  }
-
   func lastActionTitle(localizer: AppLocalizer) -> String {
     lastAction.resolve(with: localizer)
-  }
-
-  func requestAccessibility() {
-    hasAccessibilityAccess = AccessibilityPermission.requestPrompt()
-    setLastAction(hasAccessibilityAccess ? .key("action.accessibility_granted") : .key("action.accessibility_waiting"))
-  }
-
-  func openAccessibilitySettings() {
-    AccessibilityPermission.openSettings()
   }
 
   func requestPermissionAuthorizationFlow() {
@@ -121,37 +115,34 @@ final class AppModel: ObservableObject {
   }
 
   func refresh() {
-    refreshAccessibilityStatus()
+    volumeFader.retryRestoration()
     syncLaunchAtLoginStatus()
     microphoneMonitor.refresh()
   }
 
-  func testPlayPause() {
-    refreshAccessibilityStatus()
-    guard hasAccessibilityAccess else {
-      setLastAction(.key("action.accessibility_missing"))
-      requestPermissionAuthorization()
+  private func handle(_ snapshot: MicrophoneSnapshot, fromMonitor: Bool = true) {
+    // AppleScript replies can reenter the main run loop. Coalesce microphone
+    // updates while a playback decision is in progress instead of running it twice.
+    guard !handlingSnapshot && !volumeFader.isBusy else {
+      if fromMonitor { queuedSnapshot = snapshot }
       return
     }
-
-    microphoneSession?.resumeTarget = nil
-    microphoneSession?.pendingPause = nil
-    microphoneSession?.resumeIdentity = nil
-    microphoneSession?.didAttemptPause = true
-    microphoneSession?.reconsiderAfterAuthorization = nil
-    setPausedByApp(false)
-    setLastAction(playback.sendMediaKey() ? .key("action.media_key_sent") : .key("action.media_key_failed"))
-  }
-
-  private func handle(_ snapshot: MicrophoneSnapshot) {
-    defer { updatePlaybackTimer() }
+    handlingSnapshot = true
+    defer {
+      handlingSnapshot = false
+      updatePlaybackTimer()
+      drainQueuedSnapshot()
+    }
+    volumeFader.retryRestoration()
     if snapshot.isActive != self.snapshot.isActive || snapshot.errorMessage != self.snapshot.errorMessage {
       logger.notice("Microphone active=\(snapshot.isActive), error=\(snapshot.errorMessage != nil)")
     }
+    if snapshot.isActive && !self.snapshot.isActive { cancelFade() }
     if self.snapshot != snapshot { self.snapshot = snapshot }
-    refreshAccessibilityStatus()
 
+    if !snapshot.isActive && microphoneSession?.fading == true { cancelFade() }
     guard snapshot.errorMessage == nil else {
+      cancelFade()
       // An interrupted observation cannot establish continuous pause ownership.
       microphoneSession?.resumeTarget = nil
       microphoneSession?.pendingPause = nil
@@ -172,12 +163,20 @@ final class AppModel: ObservableObject {
     }
   }
 
+  private func drainQueuedSnapshot() {
+    guard !handlingSnapshot && !volumeFader.isBusy else { return }
+    let queued = queuedSnapshot
+    queuedSnapshot = nil
+    if let queued, queued != snapshot { handle(queued) }
+  }
+
   private func startMicrophoneSessionIfNeeded() {
     if microphoneSession == nil {
       microphoneSession = MicrophoneSession()
       setPausedByApp(false)
     }
 
+    if microphoneSession?.fading == true { return }
     if microphoneSession?.pendingPause != nil {
       confirmPendingPause()
       return
@@ -237,20 +236,29 @@ final class AppModel: ObservableObject {
         return
       }
       microphoneSession?.didAttemptPause = true
-      // An explicit pause is safe; a global toggle is not. Confirm it took
-      // effect before claiming ownership of a later resume.
-      let sent = playback.pause(player)
-      let state = playback.state(player)
-      let identityMatches = playback.identity(player) == identity
-      logger.notice("Pause sent=\(sent), state=\(String(describing: state), privacy: .public), same item=\(identityMatches)")
-      guard sent, identityMatches else {
-        setLastAction(.key("action.pause_failed"))
-        return
+      if fadeMusicEnabled {
+        let sessionID = microphoneSession?.id
+        microphoneSession?.fading = true
+        volumeFader.fadeOut(player, identity: identity, valid: { [weak self] in
+          guard let self else { return false }
+          return self.snapshot.isActive && self.autoControlEnabled
+            && self.microphoneSession?.id == sessionID
+            && self.playback.identity(player) == identity
+            && self.playback.hasAutomationPermission(player)
+            && self.playback.state(player) == .playing
+        }, cancelled: { [weak self] in
+          guard let self, self.microphoneSession?.id == sessionID else { return }
+          self.microphoneSession?.fading = false
+          self.microphoneSession?.reconsiderAfterAuthorization = self.playback.currentStatus().authorizedPlayers
+          self.setLastAction(.key("action.playback_changed"))
+        }, pause: { [weak self] in
+          guard let self, self.microphoneSession?.id == sessionID else { return }
+          self.microphoneSession?.fading = false
+          self.sendPause(player, identity: identity)
+        })
+      } else {
+        sendPause(player, identity: identity)
       }
-      microphoneSession?.pendingPause = PendingPause(
-        player: player, identity: identity, deadline: playback.now() + 3
-      )
-      confirmPendingPause()
     case .some(.notPlaying), .some(.stopped):
       microphoneSession?.didAttemptPause = true
       microphoneSession?.reconsiderAfterAuthorization = status.authorizedPlayers
@@ -287,8 +295,46 @@ final class AppModel: ObservableObject {
       setLastAction(.key("action.playback_changed"))
       return
     }
-    setLastAction(playback.play(player) ? .key("action.resumed") : .key("action.resume_failed"))
-    logger.notice("Resume command result=\(self.lastAction == .key("action.resumed"))")
+    let played: Bool
+    if fadeMusicEnabled {
+      played = volumeFader.fadeIn(player, identity: identity, valid: { [weak self] in
+        guard let self else { return false }
+        return !self.snapshot.isActive && self.autoControlEnabled
+          && self.playback.identity(player) == identity
+          && self.playback.hasAutomationPermission(player)
+      }, ready: { [playback] in playback.state(player) == .playing }, play: { playback.play(player) })
+    } else { played = playback.play(player) }
+    setLastAction(played ? .key("action.resumed") : .key("action.resume_failed"))
+    logger.notice("Resume command result=\(played)")
+  }
+
+  private func cancelFade() {
+    volumeFader.cancel()
+    if microphoneSession?.fading == true {
+      microphoneSession?.fading = false
+      microphoneSession?.didAttemptPause = false
+    }
+  }
+
+  func prepareForTermination() {
+    cancelFade()
+    playbackTimer?.invalidate()
+    playbackTimer = nil
+    microphoneMonitor.stop()
+  }
+
+  private func sendPause(_ player: ScriptableMediaPlayer, identity: String) {
+    let sent = playback.pause(player)
+    guard sent, playback.identity(player) == identity else {
+      volumeFader.cancel()
+      setLastAction(.key("action.pause_failed"))
+      return
+    }
+    microphoneSession?.pendingPause = PendingPause(
+      player: player, identity: identity, deadline: playback.now() + 3
+    )
+    confirmPendingPause()
+    updatePlaybackTimer()
   }
 
   private func confirmPendingPause() {
@@ -297,6 +343,7 @@ final class AppModel: ObservableObject {
           playback.isRunning(pending.player),
           playback.hasAutomationPermission(pending.player),
           playback.identity(pending.player) == pending.identity else {
+      volumeFader.cancel()
       microphoneSession?.pendingPause = nil
       setLastAction(.key("action.pause_failed"))
       logger.notice("Pending pause expired or player/item changed")
@@ -305,6 +352,7 @@ final class AppModel: ObservableObject {
     let state = playback.state(pending.player)
     logger.notice("Pending pause state=\(String(describing: state), privacy: .public)")
     if state == .notPlaying {
+      volumeFader.cancel()
       microphoneSession?.pendingPause = nil
       microphoneSession?.resumeTarget = pending.player
       microphoneSession?.resumeIdentity = pending.identity
@@ -312,14 +360,10 @@ final class AppModel: ObservableObject {
       setLastAction(.key("action.paused_player %@", [.raw(pending.player.displayName)]))
       logger.notice("Pause confirmed; resume ownership retained")
     } else if state == .stopped {
+      volumeFader.cancel()
       microphoneSession?.pendingPause = nil
       setLastAction(.key("action.pause_failed"))
     }
-  }
-
-  private func refreshAccessibilityStatus() {
-    let trusted = playback.isAccessibilityTrusted()
-    if hasAccessibilityAccess != trusted { hasAccessibilityAccess = trusted }
   }
 
   private func setLastAction(_ value: LocalizedMessage) {
@@ -341,7 +385,7 @@ final class AppModel: ObservableObject {
     guard playbackTimer == nil else { return }
     playbackTimer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
       guard let self else { return }
-      self.handle(self.snapshot)
+      self.handle(self.snapshot, fromMonitor: false)
     }
     playbackTimer?.tolerance = 0.05
   }
@@ -370,6 +414,8 @@ final class AppModel: ObservableObject {
   }
 
   private struct MicrophoneSession {
+    let id = UUID()
+    var fading = false
     var pendingPause: PendingPause?
     var resumeTarget: ScriptableMediaPlayer?
     var resumeIdentity: String?

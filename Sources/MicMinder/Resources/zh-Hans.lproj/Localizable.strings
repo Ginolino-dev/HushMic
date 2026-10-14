@@ -3,8 +3,7 @@
 "menu.launch_at_login" = "开机自启";
 "menu.language" = "语言";
 "menu.refresh" = "刷新状态";
-"menu.authorize_accessibility" = "播放权限…";
-"menu.test_media_key" = "测试媒体键";
+"menu.playback_permissions" = "播放权限…";
 "menu.version %@" = "版本 %@";
 "menu.github" = "GitHub";
 "menu.quit" = "退出";
@@ -20,23 +19,15 @@
 "status.mic_active" = "麦克风使用中";
 "status.mic_idle" = "麦克风空闲";
 "status.no_microphone" = "未找到麦克风";
-"status.accessibility_granted" = "辅助功能已授权";
-"status.accessibility_needed" = "辅助功能：可选（手动媒体键）";
 
 /* Action messages */
 "action.listening" = "正在监听麦克风";
-"action.accessibility_granted" = "已获得辅助功能权限";
-"action.accessibility_waiting" = "等待辅助功能授权";
-"action.media_key_sent" = "已发送媒体键";
-"action.media_key_failed" = "媒体键发送失败";
 "action.auto_control_off" = "自动控制已关闭";
-"action.accessibility_missing" = "缺少辅助功能权限";
 "action.automation_permission_missing" = "缺少音乐应用自动化权限";
 "action.paused_player %@" = "麦克风启用，已暂停 %@";
 "action.music_already_paused" = "音乐已暂停，跳过";
 "action.playback_unconfirmed" = "未确认音乐正在播放，跳过";
 "action.no_pausable_playback" = "未检测到可暂停的播放";
-"action.pause_media_key_failed" = "暂停媒体键发送失败";
 "action.paused" = "麦克风启用，已暂停";
 "action.mic_idle" = "麦克风空闲";
 "action.resume_failed" = "恢复播放失败";
@@ -49,11 +40,9 @@
 "device.fallback_name %lld" = "麦克风 %lld";
 
 /* Permissions */
-"permission.accessibility" = "辅助功能权限";
 "permission.automation %@" = "%@ 自动化权限";
 "permission.window.title" = "MicMinder 权限授权";
 "permission.window.heading" = "可选播放权限";
-"permission.window.message" = "监听麦克风活动无需授权。如需自动暂停和恢复，请授权 Music 或 Spotify。辅助功能仅用于手动测试媒体键。可随时关闭此窗口。";
 "permission.window.status_needed" = "未授权";
 "permission.window.status_granted" = "已授权";
 "permission.window.authorize" = "去授权";
@@ -83,3 +72,31 @@
 "action.pause_failed" = "无法确认播放已暂停";
 
 "coreaudio.observe_activity" = "监听麦克风活动";
+
+"setup.welcome" = "欢迎使用 MicMinder";
+
+"setup.players" = "连接音乐播放器";
+
+"setup.message" = "MicMinder 会在您说话时暂停音乐，随后恢复播放。请启用下方播放器，并在 macOS 提示时允许 MicMinder 控制它。";
+
+"setup.menu_hint" = "MicMinder 位于菜单栏，您可随时在那里重新打开播放权限。";
+
+"setup.later" = "稍后设置";
+
+"setup.start" = "开始使用";
+
+"setup.connected" = "已连接";
+
+"setup.connecting" = "正在连接…";
+
+"setup.not_connected" = "未连接 — 启用后可暂停和恢复播放";
+
+"setup.denied" = "权限已拒绝。请在系统设置 → 隐私与安全性 → 自动化中，启用 MicMinder 下的此播放器。";
+
+"setup.settings" = "打开设置";
+
+"setup.enable" = "启用";
+
+"setup.failed" = "无法打开播放器。请确认已安装后重试。";
+
+"menu.fade_music" = "音乐淡入淡出";

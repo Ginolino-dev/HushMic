@@ -1,11 +1,9 @@
 import AppKit
 import Combine
-import SwiftUI
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
   private let appModel = AppModel()
   private let localizer = AppLocalizer()
-  private let permissionService = PermissionAuthorizationService()
   private var statusItem: NSStatusItem?
   private var displayedStatusIcon: String?
   private var cancellables: Set<AnyCancellable> = []
@@ -21,6 +19,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     self.statusItem = statusItem
     statusItem.menu = makeMenu()
     updateStatusIcon()
+    if !UserDefaults.standard.bool(forKey: "welcomeCompleted") {
+      DispatchQueue.main.async { [weak self] in self?.showPermissionWindow(welcome: true) }
+    }
 
     appModel.objectWillChange
       .sink { [weak self] _ in
@@ -59,7 +60,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     menu.removeAllItems()
     menu.addItem(disabledItem(appModel.statusTitle(localizer: localizer)))
     menu.addItem(disabledItem(appModel.deviceTitle(localizer: localizer)))
-    menu.addItem(disabledItem(appModel.permissionTitle(localizer: localizer)))
     menu.addItem(disabledItem(appModel.lastActionTitle(localizer: localizer)))
     menu.addItem(.separator())
 
@@ -67,6 +67,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
       title: localizer.text("menu.auto_control"),
       action: #selector(toggleAutoControl),
       state: appModel.autoControlEnabled ? .on : .off
+    ))
+    menu.addItem(actionItem(
+      title: localizer.text("menu.fade_music"),
+      action: #selector(toggleFadeMusic),
+      state: appModel.fadeMusicEnabled ? .on : .off
     ))
     menu.addItem(actionItem(
       title: localizer.text("menu.launch_at_login"),
@@ -81,8 +86,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     menu.addItem(.separator())
 
     menu.addItem(actionItem(title: localizer.text("menu.refresh"), action: #selector(refresh)))
-    menu.addItem(actionItem(title: localizer.text("menu.authorize_accessibility"), action: #selector(authorizeAccessibility)))
-    menu.addItem(actionItem(title: localizer.text("menu.test_media_key"), action: #selector(testMediaKey)))
+    menu.addItem(actionItem(title: localizer.text("menu.playback_permissions"), action: #selector(openPlaybackPermissions)))
     menu.addItem(actionItem(title: localizer.text("menu.github"), action: #selector(openGitHub)))
     menu.addItem(.separator())
     menu.addItem(disabledItem(versionTitle()))
@@ -144,6 +148,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     appModel.autoControlEnabled.toggle()
   }
 
+  @objc private func toggleFadeMusic() { appModel.fadeMusicEnabled.toggle() }
+
+  func applicationWillTerminate(_ notification: Notification) { appModel.prepareForTermination() }
+
   @objc private func toggleLaunchAtLogin() {
     appModel.launchAtLoginEnabled.toggle()
   }
@@ -163,16 +171,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     appModel.refresh()
   }
 
-  @objc private func authorizeAccessibility() {
+  @objc private func openPlaybackPermissions() {
     presentPermissionConfirmationIfNeeded()
   }
 
-  @objc private func testMediaKey() {
-    appModel.testPlayPause()
-  }
-
   @objc private func openGitHub() {
-    guard let url = URL(string: "https://github.com/Ginolino-dev/HushMic") else {
+    guard let url = URL(string: "https://github.com/Ginolino-dev/MicMinder") else {
       return
     }
     NSWorkspace.shared.open(url)
@@ -184,19 +188,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
   private func presentPermissionConfirmationIfNeeded() {
     // Only explicit menu/button actions open this nonmodal window.
-    showPermissionWindow()
+    DispatchQueue.main.async { [weak self] in self?.showPermissionWindow() }
   }
 
-  private func showPermissionWindow() {
+  private func showPermissionWindow(welcome: Bool = false) {
     if permissionWindowController == nil {
       permissionWindowController = PermissionAuthorizationWindowController(
         appModel: appModel,
-        localizer: localizer,
-        permissionService: permissionService
+        localizer: localizer
       )
     }
 
-    permissionWindowController?.show()
+    permissionWindowController?.show(welcome: welcome)
   }
 }
 
@@ -207,12 +210,11 @@ extension AppDelegate: NSMenuDelegate {
 }
 
 @main
-struct MicMinderApp: App {
-  @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-
-  var body: some Scene {
-    Settings {
-      EmptyView()
-    }
+struct MicMinderApp {
+  static func main() {
+    let application = NSApplication.shared
+    let delegate = AppDelegate()
+    application.delegate = delegate
+    withExtendedLifetime(delegate) { application.run() }
   }
 }

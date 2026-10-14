@@ -4,7 +4,7 @@
 
 MicMinder is a lightweight macOS menu bar utility that watches microphone activity and keeps your media playback out of the way. When the microphone becomes active, it can pause the currently playing media. When the microphone becomes idle again, it only resumes media playback that MicMinder paused.
 
-MicMinder is written in Swift as a Swift Package Manager executable. It uses AppKit for the menu bar app shell and permission window, SwiftUI for menu UI, CoreAudio for microphone activity detection, ServiceManagement for launch-at-login registration, and AppleScript/media keys for playback control.
+MicMinder is written in Swift as a Swift Package Manager executable. It uses AppKit for the menu bar app shell and permission window, CoreAudio for microphone activity detection, ServiceManagement for launch-at-login registration, and AppleScript for playback control.
 
 ## Why
 
@@ -23,9 +23,10 @@ These screenshots show the upstream HushMic interface; this fork is named MicMin
 - Shows the current microphone state from the macOS menu bar.
 - Detects active input devices through CoreAudio.
 - Automatically pauses media when microphone input starts.
+- Optional half-second player-volume fades before pausing and when resuming; system volume is unchanged.
 - Restores only media playback that MicMinder paused.
 - Supports Music, Spotify, and iTunes through AppleScript playback state checks.
-- Keeps global media keys manual; browser and unknown-player audio is not automatically toggled.
+- Shows a first-launch welcome window to connect Apple Music or Spotify.
 - Provides English, Simplified Chinese, and automatic language selection.
 - Can register the packaged app as a macOS login item.
 
@@ -102,17 +103,17 @@ Runs the packaged binary under `lldb`.
 
 Microphone activity monitoring works without granting permissions. Open **Playback Permissions…** from the menu to authorize only the players you want to control. The window can be dismissed with **Done**, **Not Now**, or its close button.
 
-Automatic Music/Spotify/iTunes control uses per-player Automation permission. Accessibility is optional and is only used by **Test Media Key**. Background monitoring never requests Automation consent.
+Automatic Music/Spotify/iTunes control uses per-player Automation permission. No Accessibility permission is required. Background monitoring never requests Automation consent.
 
 Automatic control sends explicit pause/play commands, confirms the pause, and remembers the player process and current track. It skips resume if the player quit, the track changed, playback was restarted, permission was revoked, another authorized player is playing, or Auto Pause/Resume was switched off. Granting permission or enabling control during microphone use takes effect on the next activity check.
 
-Browser and other unknown-player audio is left alone: a global play/pause key cannot safely target or restore it. The manual media-key button remains available. Track identifiers must be readable; unsupported streams are skipped. Brief user changes between activity checks may not be observable.
+Browser and other unknown-player audio is left alone: a global play/pause key cannot safely target or restore it. Track identifiers must be readable; unsupported streams are skipped. Brief user changes between activity checks may not be observable.
 
 ## Testing
 
 Run the regression suite with `swift test`. For a packaged-app check:
 
-1. Open Music or Spotify and play a track. In MicMinder, open **Playback Permissions…** and authorize that player. Accessibility can remain off.
+1. Open Music or Spotify and play a track. In MicMinder, open **Playback Permissions…** and authorize that player.
 2. Enable **Auto Pause/Resume**, then start and stop microphone use. The same track should pause and resume.
 3. Repeat with music already paused: it should stay paused.
 4. While the microphone is active, turn auto-control off, change tracks, or manually resume playback. MicMinder should skip its pending resume.

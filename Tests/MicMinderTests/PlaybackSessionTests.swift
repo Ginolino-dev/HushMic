@@ -4,6 +4,219 @@ import Combine
 
 @MainActor
 final class PlaybackSessionTests: XCTestCase {
+  func testFadeLowersVolumeBeforePauseAndRestoresVolumeWhilePaused() async throws {
+    let h = Harness()
+    h.volume = 60
+    await h.emit(active: true)
+    XCTAssertEqual(h.commands, [])
+    try await Task.sleep(nanoseconds: 300_000_000)
+    XCTAssertLessThan(h.volume!, 60)
+    XCTAssertGreaterThan(h.volume!, 0)
+    try await Task.sleep(nanoseconds: 450_000_000)
+    XCTAssertEqual(h.commands, ["pause:com.spotify.client"])
+    XCTAssertEqual(h.volume, 60)
+    XCTAssertEqual(h.volumeAtPause, 0)
+  }
+
+  func testFadeResumesAtNewUserVolumeAndFadesUp() async throws {
+    let h = Harness()
+    h.volume = 60
+    await h.emit(active: true)
+    try await Task.sleep(nanoseconds: 750_000_000)
+    h.volume = 35
+    await h.emit(active: false)
+    XCTAssertEqual(h.volumeAtPlay, 0)
+    try await Task.sleep(nanoseconds: 750_000_000)
+    XCTAssertEqual(h.volume, 35)
+    XCTAssertEqual(h.commands, ["pause:com.spotify.client", "play:com.spotify.client"])
+  }
+
+  func testShortMicrophoneSessionCancelsFadeWithoutPausing() async throws {
+    let h = Harness()
+    h.volume = 60
+    await h.emit(active: true)
+    try await Task.sleep(nanoseconds: 150_000_000)
+    await h.emit(active: false)
+    try await Task.sleep(nanoseconds: 600_000_000)
+    XCTAssertEqual(h.volume, 60)
+    XCTAssertEqual(h.commands, [])
+  }
+
+  func testUserVolumeChangeDuringFadeIsNotOverwritten() async throws {
+    let h = Harness()
+    h.volume = 60
+    await h.emit(active: true)
+    try await Task.sleep(nanoseconds: 150_000_000)
+    h.volume = 80
+    try await Task.sleep(nanoseconds: 600_000_000)
+    XCTAssertEqual(h.volume, 80)
+    XCTAssertEqual(h.commands, ["pause:com.spotify.client"])
+  }
+
+  func testDisablingControlDuringFadeRestoresVolumeWithoutPausing() async throws {
+    let h = Harness()
+    h.volume = 60
+    await h.emit(active: true)
+    try await Task.sleep(nanoseconds: 150_000_000)
+    h.model.autoControlEnabled = false
+    try await Task.sleep(nanoseconds: 600_000_000)
+    XCTAssertEqual(h.volume, 60)
+    XCTAssertEqual(h.commands, [])
+  }
+
+  func testTerminationDuringFadeRestoresVolumeWithoutPausing() async throws {
+    let h = Harness()
+    h.volume = 60
+    await h.emit(active: true)
+    try await Task.sleep(nanoseconds: 150_000_000)
+    h.model.prepareForTermination()
+    try await Task.sleep(nanoseconds: 600_000_000)
+    XCTAssertEqual(h.volume, 60)
+    XCTAssertEqual(h.commands, [])
+  }
+
+  func testChangedTrackDuringFadeRestoresVolumeButNeverPausesNewTrack() async throws {
+    let h = Harness()
+    h.volume = 60
+    await h.emit(active: true)
+    try await Task.sleep(nanoseconds: 150_000_000)
+    h.identity = "process-1:track-2"
+    try await Task.sleep(nanoseconds: 600_000_000)
+    XCTAssertEqual(h.volume, 60)
+    XCTAssertEqual(h.commands, [])
+  }
+
+  func testDisabledFadePausesImmediatelyAtOriginalVolume() async {
+    let h = Harness()
+    h.volume = 60
+    h.model.fadeMusicEnabled = false
+    await h.emit(active: true)
+    XCTAssertEqual(h.volumeAtPause, 60)
+    XCTAssertEqual(h.commands, ["pause:com.spotify.client"])
+  }
+
+  func testDelayedPauseKeepsVolumeDownUntilPauseIsConfirmed() async throws {
+    let h = Harness()
+    h.volume = 60
+    h.pauseChangesState = false
+    await h.emit(active: true)
+    try await Task.sleep(nanoseconds: 650_000_000)
+    XCTAssertEqual(h.volume, 0)
+    XCTAssertFalse(h.model.pausedByApp)
+    h.state = .notPlaying
+    await h.emit(active: true)
+    XCTAssertEqual(h.volume, 60)
+    XCTAssertTrue(h.model.pausedByApp)
+  }
+
+  func testPermissionReturningRestoresVolumeAndRetriesInterruptedFade() async throws {
+    let h = Harness()
+    h.volume = 60
+    await h.emit(active: true)
+    try await Task.sleep(nanoseconds: 150_000_000)
+    h.automationGranted = false
+    try await Task.sleep(nanoseconds: 150_000_000)
+    XCTAssertLessThan(h.volume!, 60)
+    h.automationGranted = true
+    await h.emit(active: true)
+    XCTAssertEqual(h.volume, 60)
+    try await Task.sleep(nanoseconds: 750_000_000)
+    XCTAssertEqual(h.volume, 60)
+    XCTAssertEqual(h.commands, ["pause:com.spotify.client"])
+  }
+
+  func testIdleFadeInRestoresVolumeWhenPermissionReturnsWithoutMicrophoneEvent() async throws {
+    let h = Harness()
+    defer { h.model.prepareForTermination() }
+    h.volume = 60
+    await h.emit(active: true)
+    try await Task.sleep(nanoseconds: 750_000_000)
+    await h.emit(active: false)
+    try await Task.sleep(nanoseconds: 150_000_000)
+    h.automationGranted = false
+    try await Task.sleep(nanoseconds: 150_000_000)
+    XCTAssertLessThan(h.volume!, 60)
+    h.automationGranted = true
+    try await Task.sleep(nanoseconds: 1_200_000_000)
+    XCTAssertEqual(h.volume, 60)
+  }
+
+  func testSlowPlayCommandDoesNotConsumeFadeInDuration() async throws {
+    let h = Harness()
+    h.volume = 60
+    await h.emit(active: true)
+    try await Task.sleep(nanoseconds: 750_000_000)
+    h.playDelay = 0.6
+    await h.emit(active: false)
+    try await Task.sleep(nanoseconds: 100_000_000)
+    XCTAssertLessThan(h.volume!, 60)
+    try await Task.sleep(nanoseconds: 650_000_000)
+    XCTAssertEqual(h.volume, 60)
+  }
+
+  func testDelayedPlayingStateWaitsForPlaybackBeforeFadingIn() async throws {
+    let h = Harness()
+    h.volume = 60
+    await h.emit(active: true)
+    try await Task.sleep(nanoseconds: 750_000_000)
+    h.playChangesState = false
+    await h.emit(active: false)
+    try await Task.sleep(nanoseconds: 200_000_000)
+    XCTAssertEqual(h.volume, 0)
+    h.state = .playing
+    try await Task.sleep(nanoseconds: 150_000_000)
+    XCTAssertLessThan(h.volume!, 60)
+    try await Task.sleep(nanoseconds: 650_000_000)
+    XCTAssertEqual(h.volume, 60)
+  }
+
+  func testMicrophoneEventDuringPlayIsNotLostToStaleTimerPoll() async {
+    let h = Harness()
+    await h.emit(active: true)
+    h.onPlay = {
+      h.monitor.onChange?(MicrophoneSnapshot(isActive: true, activeDeviceNames: [],
+                                             inputDeviceNames: [], errorMessage: nil))
+      RunLoop.main.run(until: Date().addingTimeInterval(0.35))
+    }
+    await h.emit(active: false)
+    XCTAssertTrue(h.model.snapshot.isActive)
+    XCTAssertEqual(h.commands, ["pause:com.spotify.client", "play:com.spotify.client", "pause:com.spotify.client"])
+    h.onPlay = {}
+    h.model.autoControlEnabled = false
+  }
+
+  func testCanceledFadeCannotBeRevivedByReentrantPlaybackConfirmation() async throws {
+    let h = Harness()
+    h.volume = 60
+    let fader = VolumeFadeController(playback: h.playback)
+    defer { fader.cancel() }
+    let played = fader.fadeIn(h.player, identity: h.identity!, valid: { true }, ready: {
+      fader.cancel()
+      return true
+    }, play: { true })
+    XCTAssertTrue(played)
+    try await Task.sleep(nanoseconds: 200_000_000)
+    XCTAssertEqual(h.volume, 60)
+    XCTAssertEqual(h.volumeWrites, [0, 60])
+    try await Task.sleep(nanoseconds: 600_000_000)
+    XCTAssertEqual(h.volumeWrites, [0, 60])
+  }
+
+  func testMicrophoneEndingDuringVolumeWriteRestoresOriginalVolume() async throws {
+    let h = Harness()
+    h.volume = 60
+    h.onVolumeWrite = {
+      h.onVolumeWrite = {}
+      h.monitor.onChange?(MicrophoneSnapshot(isActive: false, activeDeviceNames: [],
+                                             inputDeviceNames: [], errorMessage: nil))
+      RunLoop.main.run(until: Date().addingTimeInterval(0.05))
+    }
+    await h.emit(active: true)
+    try await Task.sleep(nanoseconds: 750_000_000)
+    XCTAssertEqual(h.volume, 60)
+    XCTAssertEqual(h.commands, [])
+  }
+
   func testDelayedPauseIsConfirmedWithoutRepeatedMicrophoneNotifications() async throws {
     let h = Harness()
     h.pauseChangesState = false
@@ -36,18 +249,6 @@ final class PlaybackSessionTests: XCTestCase {
     withExtendedLifetime(subscription) {}
   }
 
-  func testPermissionChangesStillPublishWithUnchangedMicrophoneState() async {
-    let h = Harness()
-    h.accessibilityGranted = false
-    await h.emit(active: false)
-    var updates = 0
-    let subscription = h.model.objectWillChange.sink { updates += 1 }
-    h.accessibilityGranted = true
-    await h.emit(active: false)
-    XCTAssertEqual(updates, 1)
-    XCTAssertTrue(h.model.hasAccessibilityAccess)
-    withExtendedLifetime(subscription) {}
-  }
 
   func testResumesOnlyPlayerPausedByApp() async {
     let h = Harness()
@@ -91,9 +292,8 @@ final class PlaybackSessionTests: XCTestCase {
     XCTAssertEqual(h.commands, [])
   }
 
-  func testScriptablePlayerDoesNotNeedAccessibility() async {
+  func testScriptablePlayerUsesOnlyAutomation() async {
     let h = Harness()
-    h.accessibilityGranted = false
     await h.emit(active: true)
     await h.emit(active: false)
     XCTAssertEqual(h.commands, ["pause:com.spotify.client", "play:com.spotify.client"])
@@ -102,7 +302,6 @@ final class PlaybackSessionTests: XCTestCase {
   func testMissingPermissionsDoNotOpenWindowsFromMonitoring() async {
     let h = Harness()
     h.automationGranted = false
-    h.accessibilityGranted = false
     var windowsRequested = 0
     h.model.onPermissionAuthorizationNeeded = { windowsRequested += 1 }
     await h.emit(active: true)
@@ -241,13 +440,6 @@ final class PlaybackSessionTests: XCTestCase {
     XCTAssertEqual(h.commands, ["pause:com.spotify.client"])
   }
 
-  func testManualMediaKeyRelinquishesAutomaticResume() async {
-    let h = Harness()
-    await h.emit(active: true)
-    h.model.testPlayPause()
-    await h.emit(active: false)
-    XCTAssertEqual(h.commands, ["pause:com.spotify.client", "media-key"])
-  }
 
   func testMonitoringErrorCancelsOutstandingResume() async {
     let h = Harness()
@@ -290,8 +482,11 @@ private final class Harness {
   let defaults: UserDefaults
   let suiteName = "MicMinderTests." + UUID().uuidString
   var model: AppModel!
+  var playback: PlaybackAccess!
+  var onPlay: () -> Void = {}
+  var onVolumeWrite: () -> Void = {}
+  var volumeWrites: [Int] = []
   var state: ReliablePlaybackState
-  var accessibilityGranted = true
   var automationGranted = true
   var useGlobalMediaKey = false
   var pauseSucceeds = true
@@ -300,6 +495,11 @@ private final class Harness {
   var authorizedPlayers: Set<String> = ["com.spotify.client"]
   var statusPlayer: ScriptableMediaPlayer?
   var commands: [String] = []
+  var playDelay: TimeInterval = 0
+  var playChangesState = true
+  var volume: Int?
+  var volumeAtPause: Int?
+  var volumeAtPlay: Int?
   var time: TimeInterval = 0
 
   init(state: ReliablePlaybackState = .playing) {
@@ -310,29 +510,31 @@ private final class Harness {
       currentStatus: { [unowned self] in
         MediaPlaybackStatus(state: self.automationGranted ? self.state : nil,
                             player: self.useGlobalMediaKey ? nil : (self.statusPlayer ?? self.player),
-                            authorizedPlayers: self.authorizedPlayers)
+                            authorizedPlayers: self.automationGranted ? self.authorizedPlayers : [])
       },
       state: { [unowned self] _ in self.state },
       pause: { [unowned self] player in
+        self.volumeAtPause = self.volume
         self.commands.append("pause:" + player.bundleIdentifier)
         if self.pauseSucceeds && self.pauseChangesState { self.state = .notPlaying }
         return self.pauseSucceeds
       },
       play: { [unowned self] player in
+        self.volumeAtPlay = self.volume
         self.commands.append("play:" + player.bundleIdentifier)
-        self.state = .playing
+        if self.playDelay > 0 { Thread.sleep(forTimeInterval: self.playDelay) }
+        if self.playChangesState { self.state = .playing }
+        self.onPlay()
         return true
       },
       isRunning: { _ in true },
       hasAutomationPermission: { [unowned self] _ in self.automationGranted },
-      isAccessibilityTrusted: { [unowned self] in self.accessibilityGranted },
-      sendMediaKey: { [unowned self] in
-        self.commands.append("media-key")
-        return true
-      },
       identity: { [unowned self] _ in self.identity },
+      volume: { [unowned self] _ in self.volume },
+      setVolume: { [unowned self] _, value in self.volumeWrites.append(value); self.volume = value; self.onVolumeWrite(); return true },
       now: { [unowned self] in self.time }
     )
+    self.playback = playback
     model = AppModel(microphoneMonitor: monitor, playback: playback, defaults: defaults)
   }
 
